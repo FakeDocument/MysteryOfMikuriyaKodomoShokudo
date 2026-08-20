@@ -1,0 +1,108 @@
+name: sushictf
+
+# ネットワーク構成:
+#   target-net    : 攻略対象環境(Kali攻撃マシン・寿司屋サーバー・政府サーバー)。internal: true。
+#                   Dockerの仕様上、internal: trueのネットワークではホストへのポート公開(DNAT)が行われないため、
+#                   kaliのnoVNCポートはkali-uplink経由でホストへ公開する。
+#   kali-uplink   : kaliのnoVNCポートをホストへ公開するための非internalネットワーク。kaliのみ接続する。
+#   notebook-net  : 調査ノートUI(信頼側)専用。攻略対象環境とは分離する。
+networks:
+  target-net:
+    internal: true
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/24
+  kali-uplink: {}
+  notebook-net: {}
+
+volumes:
+  notebook-data:
+
+services:
+  # 信頼側: 調査ノートUI + 回答判定 + 進捗保存
+  notebook:
+    build:
+      context: ./docker/notebook
+    image: sushictf/notebook:local
+    container_name: sushictf-notebook
+    networks:
+      - notebook-net
+    ports:
+      - "127.0.0.1:8080:8000"
+    volumes:
+      - notebook-data:/data
+    environment:
+      - TZ=Asia/Tokyo
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+
+  # 標的側: 寿司屋サーバー(HP + Samba)
+  sushi:
+    build:
+      context: ./docker/sushi
+    image: sushictf/sushi:local
+    container_name: sushictf-sushi
+    hostname: www-mikuriya-suisan
+    networks:
+      target-net:
+        ipv4_address: 172.20.0.10
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost/"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+
+  # 標的側: 政府サーバー(海域保全対策室 内部ポータル)
+  portal:
+    build:
+      context: ./docker/portal
+    image: sushictf/portal:local
+    container_name: sushictf-portal
+    hostname: portal-kaiiki-hozen
+    networks:
+      target-net:
+        ipv4_address: 172.20.0.20
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost/"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+
+  # 攻撃側: ブラウザから操作するKali攻撃マシン(noVNC)
+  kali:
+    build:
+      context: ./docker/kali
+    image: sushictf/kali:local
+    container_name: sushictf-kali
+    networks:
+      target-net:
+        ipv4_address: 172.20.0.5
+      kali-uplink: {}
+    extra_hosts:
+      - "www.mikuriya-suisan.local:172.20.0.10"
+      - "portal.kaiiki-hozen.local:172.20.0.20"
+    ports:
+      - "127.0.0.1:6901:6901"
+    shm_size: "1gb"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:6901/"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 15s
+    depends_on:
+      sushi:
+        condition: service_healthy
+      portal:
+        condition: service_healthy
+    restart: unless-stopped

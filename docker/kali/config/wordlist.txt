@@ -1,0 +1,8 @@
+# このCTF専用の簡易ワードリスト(骨格・仮)
+# TODO: 第1章の隠しディレクトリ名が確定した時点で内容を差し替える。
+admin
+backup
+internal
+blog
+staff
+notes
