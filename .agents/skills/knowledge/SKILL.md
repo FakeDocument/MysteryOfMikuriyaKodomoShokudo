@@ -15,7 +15,7 @@ description: SushiCTFの技術方針、公開・配布要件、難易度、実�
 
 ## 現在の状態
 
-- 企画段階
+- 実装段階(初版骨格を完成し、各サービスの本実装を進行中)
 - ローカル実行環境と独自の調査ノートUIを組み合わせて配布する
 - 攻略対象のWebサイトは「寿司屋HP」と「海域保全対策室の内部ポータル」の2つに分ける
 - 寿司屋サーバーと政府サーバーは、同じ隔離環境内の別ホストとして構成する
@@ -215,7 +215,7 @@ Samba資料の役割を「認証情報の提供」から「メールクライア
   - smbclient — Samba接続・ファイル取得
   - curl
   - 簡易テキストエディタ(mousepadなど) — 取得ファイルの閲覧
-  - このCTF専用に作成した小さめのカスタムワードリスト(rockyou.txt等の汎用リストは同梱しない)
+  - DIRB同梱の標準`/usr/share/dirb/wordlists/common.txt`ワードリスト(隠しディレクトリ名はこのリストに含まれる一般名から選び、正解専用のカスタムワードリストは用意しない)
 - ランチャーやデスクトップ上のアイコンは、この最小ツールセットのみを並べ、初心者がメニューで迷わないようにする。
 
 ## 確定したマシン構成とビルド方式
@@ -259,13 +259,13 @@ Samba資料の役割を「認証情報の提供」から「メールクライア
 
 ## 実装進捗
 
-初版の骨格(横断的な最小構成)を実装済み。中身(HP本文・Samba共有・脆弱機能・攻略ツール構成の詳細)はこれからで、現時点ではプレースホルダー。
+初版の骨格(横断的な最小構成)を実装済み。寿司屋HPと第1章の隠しページは本実装済みで、Samba共有・メールクライアント・政府ポータルの脆弱機能・調査ノート本体はこれから実装する。
 
 - `compose.yaml`: 4サービス(notebook/sushi/portal/kali)+2ネットワーク(`target-net`=172.20.0.0/24・internal、`notebook-net`)を定義。kaliのnoVNCポート(6901)とnotebookのUIポート(8080)は`127.0.0.1`のみに公開し、LAN露出を避けている。
 - `docker/notebook/`: uv管理のFastAPIアプリ。`/healthz`とプレースホルダーのトップページのみ。進捗保存・Flag判定は未実装。
-- `docker/sushi/`: nginx(静的HP)+ Samba(`smb.conf`は空の`[global]`のみ)。神崎のSamba共有・御厨メールクライアント(SQLi対象)アプリは未実装。
+- `docker/sushi/`: nginx(静的HP)+ Samba。寿司屋HPの公開ページと第1章の隠しページは実装済み。Sambaは`smb.conf`が空の`[global]`のみで、神崎の共有と御厨メールクライアント(SQLi対象)は未実装。
 - `docker/portal/`: nginx(root, 80番)がリバースプロキシし、backendのFastAPIアプリを`www-data`ユーザーで`setpriv`により127.0.0.1:8000で動かす構成。これはコマンドインジェクションで取得させる実行ユーザーを`www-data`に固定するための設計判断。疎通確認機能・組織概要ページ・OSコマンドインジェクションは未実装。
-- `docker/kali/`: `kalilinux/kali-rolling`ベース。XFCE + TigerVNC + noVNC(6901) + 最小ツール(nmap, gobuster, smbclient, curl, firefox-esr, mousepad, xfce4-terminal)。VNCパスワードは環境変数`VNC_PASSWORD`(既定値`sushictf`)。カスタムワードリストは仮の空プレースホルダー。
+- `docker/kali/`: `kalilinux/kali-rolling`ベース。XFCE + TigerVNC + noVNC(6901) + 最小ツール(nmap, gobuster, dirb, smbclient, curl, firefox-esr, mousepad, xfce4-terminal)。VNCパスワードは環境変数`VNC_PASSWORD`(既定値`sushictf`)。ディレクトリ列挙にはDIRB同梱の標準`/usr/share/dirb/wordlists/common.txt`を使用し、正解専用のカスタムワードリストは置かない。Kaliイメージ内の同リストに`admin`と`backup`が含まれることを実装検証済み。
 - `launcher/`: macOS用`.command`(start/stop/reset)とWindows用`.bat`(start/stop/reset)。startはDocker起動確認→`pull`→`up -d`→ヘルスチェック待ち→ブラウザ自動オープン(調査ノートUIとnoVNC)を行う。
 - ビルド検証: `docker compose config`で構文確認済み。4サービス全てローカルビルド成功(ローカルの`docker build`によるもので、まだGHCRへのマルチアーキpush・バージョンタグ運用は未着手)。
 - 起動検証: 本番の`172.20.0.0/24`は検証環境のDockerホストで既存ネットワークと衝突したため、一時的なサブネットへの差し替えでのみ動作確認した(compose.yaml自体は`172.20.0.0/24`のまま)。以下を確認済み。
@@ -276,6 +276,13 @@ Samba資料の役割を「認証情報の提供」から「メールクライア
   - Kali(tigervnc-standalone-server)には`vncpasswd`バイナリが含まれず、`tigervnc-tools`パッケージの追加が必要だった(`docker/kali/Dockerfile`に反映済み)。
   - 新しいTigerVNCは設定を`~/.vnc`から`~/.config/tigervnc`へ自動移行しようとするが、この移行処理が失敗し起動ループする問題があった。回避策として、`~/.vnc`を使わず最初から`~/.config/tigervnc`(xstartup・passwd)を直接使う構成に変更済み(`docker/kali/Dockerfile`・`docker/kali/entrypoint.sh`)。
 - 既知の未検証事項: kaliのnoVNCポート(6901)は、検証に使ったDockerホストでホスト側へのポート公開が反映されない事象が発生した(`HostConfig.PortBindings`は正しいが`NetworkSettings.Ports`が空)。設定(compose.yaml)自体に誤りはなく、コンテナ内部のヘルスチェック(コンテナ内から`localhost:6901`への到達)は成功しているため、Docker Desktop側の一時的な不具合の可能性が高い(直前に大量の停止コンテナ・ビルドキャッシュをpruneした影響の可能性)。次回、Docker Desktop再起動後に改めてホスト側からの到達を確認すること。
+
+### 寿司屋HP(2026-08-20実装、2026-08-21更新)
+
+- 公開ページは`/`、`/menu/`、`/kodomo-shokudo/`、`/blog/`、`/shop/`の5つを主要導線とし、`/blog/`配下に公開済み記事3本を置く。実在の店舗サイトとして、旬の寿司、税込価格、営業時間、所在地、座席、駐車場、子連れ利用、こども食堂、店からの継続的な発信を掲載する。
+- 外部CDN・Webフォント・地図・画像サービスには依存せず、CSS/JavaScript/料理写真をコンテナへ同梱する。地域の寿司店を探す客へ内容が伝わるよう、ページ別description、canonical、サイトマップ、Restaurant構造化データを含める。
+- 第1章の隠しページは`/admin/`(初期パスワード命名規則)と`/backup/`(神崎のローマ字表記・2019年入社)。公開ナビゲーションとサイトマップには載せず、DIRB同梱の標準`common.txt`に含まれる一般的なディレクトリ名として、通常のディレクトリ列挙で発見させる。正解専用のカスタムワードリストは用意しない。公開ブログ`/blog/`とバックアップに残った未公開下書き`/backup/`を分け、下書きの存在が不自然にならない構成にする。
+- nginxは専用設定で静的ページ・UTF-8・カスタム404・同梱アセットのキャッシュを処理する。ローカルDockerイメージのビルドと、コンテナ内HTTPで`/admin/`・`/backup/`が200、旧URL`/staff-notice/`・`/blog-drafts/`が404になることを検証済み。
 
 ## 未決定事項
 

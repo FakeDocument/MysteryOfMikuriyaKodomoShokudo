@@ -6,6 +6,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY samba/smb.conf /etc/samba/smb.conf
+COPY nginx.conf /etc/nginx/sites-available/default
 COPY site/ /usr/share/nginx/html/
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

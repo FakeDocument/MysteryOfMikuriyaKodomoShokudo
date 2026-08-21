@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: http://www.mikuriya-suisan.local/sitemap.xml
