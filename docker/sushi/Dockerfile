@@ -6,10 +6,16 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY samba/smb.conf /etc/samba/smb.conf
+COPY samba/share/ /srv/samba/staff/
 COPY nginx.conf /etc/nginx/sites-available/default
 COPY site/ /usr/share/nginx/html/
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN useradd --system --user-group --no-create-home --shell /usr/sbin/nologin kanzaki \
+    && printf '%s\n%s\n' 'Kanzaki2019' 'Kanzaki2019' | smbpasswd -a -s kanzaki \
+    && chown -R root:kanzaki /srv/samba/staff \
+    && find /srv/samba/staff -type d -exec chmod 0750 {} + \
+    && find /srv/samba/staff -type f -exec chmod 0640 {} + \
+    && chmod +x /entrypoint.sh
 
 EXPOSE 80 445
 

@@ -145,15 +145,15 @@ Kali攻撃マシンは事前構成された隔離ネットワークから寿司�
 
 ## 確定したサーバー構成
 
-隔離ブリッジネットワーク`172.20.0.0/24`(`internal: true`でインターネット非到達)に、Kali攻撃マシン・寿司屋サーバー・政府サーバーを同居させる。調査ノートUI・進捗保存は別ネットワークに分離し、攻略対象環境と混在させない。
+隔離ブリッジネットワーク`172.30.0.0/24`(`internal: true`でインターネット非到達)に、Kali攻撃マシン・寿司屋サーバー・政府サーバーを同居させる。調査ノートUI・進捗保存は別ネットワークに分離し、攻略対象環境と混在させない。
 
 Kali攻撃マシンのみ、上記の隔離ネットワークに加えて`kali-uplink`(非`internal`)にも接続する。これはDockerの`internal: true`ネットワークがホストへのポート公開(DNAT)自体を行わない仕様のため、noVNCのホスト公開に必要。この経路により、Kali攻撃マシンの実行時インターネット到達性は遮断していない(2026-08-20に要件から除外。理由は該当節を参照)。寿司屋サーバー・政府サーバーは`target-net`のみに接続し、インターネット非到達を維持する。
 
 | 役割 | IP | ホスト名 | 公開ポート |
 |---|---|---|---|
-| Kali攻撃マシン | 172.20.0.5(target-net) + kali-uplink | - | ブラウザ操作用ポート(noVNC等)のみホスト側に公開。隔離ネットワークとは別経路(kali-uplink) |
-| 寿司屋サーバー | 172.20.0.10 | `www.mikuriya-suisan.local` | 80(HTTP)、445(Samba) |
-| 政府サーバー | 172.20.0.20 | `portal.kaiiki-hozen.local` | 80(HTTP)のみ。SSHは開けない(脆弱性不使用の方針に加え、ポートスキャン結果を単純化するため) |
+| Kali攻撃マシン | 172.30.0.5(target-net) + kali-uplink | - | ブラウザ操作用ポート(noVNC等)のみホスト側に公開。隔離ネットワークとは別経路(kali-uplink) |
+| 寿司屋サーバー | 172.30.0.10 | `www.mikuriya-suisan.local` | 80(HTTP)、445(Samba) |
+| 政府サーバー | 172.30.0.20 | `portal.kaiiki-hozen.local` | 80(HTTP)のみ。SSHは開けない(脆弱性不使用の方針に加え、ポートスキャン結果を単純化するため) |
 
 両ホスト名は、Kali攻撃マシンの`/etc/hosts`へ起動時点で両方とも書き込んでおく(プレイヤーに手動のネットワーク設定を求めない方針のため)。政府サーバーのホスト名を早期に知られてしまうリスクは許容する。ホスト名が見えても、それが何のサーバーかは御厨のメール証拠を読むまで意味を持たないため、進行に支障は出ないと判断した。
 
@@ -165,9 +165,9 @@ Kali攻撃マシンのみ、上記の隔離ネットワークに加えて`kali-u
 
 ディレクトリ列挙で見つかる2つの隠しページを組み合わせて初めて成立する設計とする。
 
-- 内部連絡ページ(スタッフ向け掲示)に、IT部門からの「初期パスワード命名規則」の告知を記載する(例: 苗字ローマ字+入社年など具体的な規則は実装時に決定)。
+- 内部連絡ページ(スタッフ向け掲示)に、IT部門からの「アカウントIDと初期パスワードの命名規則」を記載する。アカウントIDは姓のローマ字をすべて小文字、初期パスワードは姓のローマ字(先頭のみ大文字)+入社年(西暦4桁)とする。
 - ブログ下書きに、神崎本人が書いた個人情報(フルネームのスペル、入社年に触れる記述など)を紛れ込ませる。
-- 両者を組み合わせてパスワードを導出させ、Sambaへログインさせる。
+- 両者を組み合わせてアカウントIDとパスワードを導出させ、Sambaへログインさせる。
 
 **御厨(メールクライアント)**
 
@@ -217,15 +217,19 @@ Samba資料の役割を「認証情報の提供」から「メールクライア
   - 簡易テキストエディタ(mousepadなど) — 取得ファイルの閲覧
   - DIRB同梱の標準`/usr/share/dirb/wordlists/common.txt`ワードリスト(隠しディレクトリ名はこのリストに含まれる一般名から選び、正解専用のカスタムワードリストは用意しない)
 - ランチャーやデスクトップ上のアイコンは、この最小ツールセットのみを並べ、初心者がメニューで迷わないようにする。
+- 日本語ページと取得証拠を正しく表示するため、Kaliイメージへ`fonts-noto-cjk`を同梱し、デスクトップのロケールを`ja_JP.UTF-8`に固定する。
+- noVNC内のKali操作では日本語入力を要求しない。プレイヤーがターミナルや`smbclient`で入力するパス、ファイル名、ユーザー名、パスワードはASCIIだけで完結させ、日本語は画面・証拠本文の閲覧に用いる。日本語のAnswer入力はホスト側ブラウザで開く調査ノートUIに限定する。
+- KaliコンテナとXFCEセッションの作業ディレクトリは`/home/player`から開始する。`smbclient`の`get`など、ローカル側へファイルを書き出す初心者向け手順が追加の`lcd`なしで成功する構成とする。
+- `nmap`はraw socket権限を要求しないTCP connect scanで動かす。`/usr/local/bin/nmap`から`/usr/bin/nmap --unprivileged`を呼ぶラッパーを同梱し、プレイヤーは通常どおり`nmap -sV <IP>`を入力できる構成とする。Kaliコンテナへの`privileged`や`NET_RAW`追加は行わない。
 
 ## 確定したマシン構成とビルド方式
 
 **コンテナ構成(4種)**
 
 1. 調査ノートUI(信頼側): Webアプリ + 回答判定 + 進捗保存。攻略対象環境とはネットワークを分離する。
-2. 寿司屋サーバー: Web(HP) + Samba。172.20.0.10。
-3. 政府サーバー: 内部ポータルWeb + sudo誤設定を含む業務スクリプト。172.20.0.20。
-4. Kali攻撃マシン: XFCE + noVNC + 最小ツールセット。172.20.0.5。
+2. 寿司屋サーバー: Web(HP) + Samba。172.30.0.10。
+3. 政府サーバー: 内部ポータルWeb + sudo誤設定を含む業務スクリプト。172.30.0.20。
+4. Kali攻撃マシン: XFCE + noVNC + 最小ツールセット。172.30.0.5。
 
 各コンテナは`docker/`配下にサービスごとに個別のDockerfileを持つ。
 
@@ -259,30 +263,46 @@ Samba資料の役割を「認証情報の提供」から「メールクライア
 
 ## 実装進捗
 
-初版の骨格(横断的な最小構成)を実装済み。寿司屋HPと第1章の隠しページは本実装済みで、Samba共有・メールクライアント・政府ポータルの脆弱機能・調査ノート本体はこれから実装する。
+初版の骨格(横断的な最小構成)を実装済み。寿司屋HP、第1章の隠しページ、Samba共有は本実装済みで、メールクライアント・政府ポータルの脆弱機能・調査ノート本体はこれから実装する。
 
-- `compose.yaml`: 4サービス(notebook/sushi/portal/kali)+2ネットワーク(`target-net`=172.20.0.0/24・internal、`notebook-net`)を定義。kaliのnoVNCポート(6901)とnotebookのUIポート(8080)は`127.0.0.1`のみに公開し、LAN露出を避けている。
+- `compose.yaml`: 4サービス(notebook/sushi/portal/kali)+3ネットワーク(`target-net`=172.30.0.0/24・internal、`kali-uplink`、`notebook-net`)を定義。kaliのnoVNCポート(6901)とnotebookのUIポート(8080)は`127.0.0.1`のみに公開し、LAN露出を避けている。
 - `docker/notebook/`: uv管理のFastAPIアプリ。`/healthz`とプレースホルダーのトップページのみ。進捗保存・Flag判定は未実装。
-- `docker/sushi/`: nginx(静的HP)+ Samba。寿司屋HPの公開ページと第1章の隠しページは実装済み。Sambaは`smb.conf`が空の`[global]`のみで、神崎の共有と御厨メールクライアント(SQLi対象)は未実装。
+- `docker/sushi/`: nginx(静的HP)+ Samba。寿司屋HPの公開ページ、第1章の隠しページ、神崎のSamba共有は実装済み。御厨メールクライアント(SQLi対象)は未実装。
 - `docker/portal/`: nginx(root, 80番)がリバースプロキシし、backendのFastAPIアプリを`www-data`ユーザーで`setpriv`により127.0.0.1:8000で動かす構成。これはコマンドインジェクションで取得させる実行ユーザーを`www-data`に固定するための設計判断。疎通確認機能・組織概要ページ・OSコマンドインジェクションは未実装。
-- `docker/kali/`: `kalilinux/kali-rolling`ベース。XFCE + TigerVNC + noVNC(6901) + 最小ツール(nmap, gobuster, dirb, smbclient, curl, firefox-esr, mousepad, xfce4-terminal)。VNCパスワードは環境変数`VNC_PASSWORD`(既定値`sushictf`)。ディレクトリ列挙にはDIRB同梱の標準`/usr/share/dirb/wordlists/common.txt`を使用し、正解専用のカスタムワードリストは置かない。Kaliイメージ内の同リストに`admin`と`backup`が含まれることを実装検証済み。
+- `docker/kali/`: `kalilinux/kali-rolling`ベース。XFCE + TigerVNC + noVNC(6901) + 最小ツール(nmap, gobuster, dirb, smbclient, curl, firefox-esr, mousepad, xfce4-terminal) + Noto CJK日本語フォント。ロケールは`ja_JP.UTF-8`。VNCパスワードは環境変数`VNC_PASSWORD`(既定値`sushictf`)。ディレクトリ列挙にはDIRB同梱の標準`/usr/share/dirb/wordlists/common.txt`を使用し、正解専用のカスタムワードリストは置かない。Kaliイメージ内の同リストに`admin`と`backup`が含まれることを実装検証済み。`nmap`は非特権ラッパーを介して実行する。
 - `launcher/`: macOS用`.command`(start/stop/reset)とWindows用`.bat`(start/stop/reset)。startはDocker起動確認→`pull`→`up -d`→ヘルスチェック待ち→ブラウザ自動オープン(調査ノートUIとnoVNC)を行う。
 - ビルド検証: `docker compose config`で構文確認済み。4サービス全てローカルビルド成功(ローカルの`docker build`によるもので、まだGHCRへのマルチアーキpush・バージョンタグ運用は未着手)。
-- 起動検証: 本番の`172.20.0.0/24`は検証環境のDockerホストで既存ネットワークと衝突したため、一時的なサブネットへの差し替えでのみ動作確認した(compose.yaml自体は`172.20.0.0/24`のまま)。以下を確認済み。
+- 起動検証: 当初の`172.20.0.0/24`は検証環境の`devcontainer_default`(`172.20.0.0/16`)と衝突したため、2026-08-22に`target-net`を`172.30.0.0/24`へ変更した。変更後のCompose構成で以下を確認済み。
   - kaliコンテナから`www.mikuriya-suisan.local`(sushi)・`portal.kaiiki-hozen.local`(portal)へHTTP到達可能(起動時の`extra_hosts`で名前解決)。
+  - kaliコンテナから`172.30.0.10`のSambaへ正規認証で接続し、`staff`共有を列挙可能。
   - kaliコンテナから外部(1.1.1.1)への到達は失敗(`internal: true`によるインターネット非到達を確認)。
-  - notebook/sushi/portalの3サービスはヘルスチェックがhealthyになることを確認済み。
+  - notebook/sushi/portal/kaliの4サービスがすべてhealthyになることを確認済み。
+  - ホスト側から`127.0.0.1:6901`(noVNC)と`127.0.0.1:8080`(調査ノートUI)へ到達可能。
+  - kaliの`player`ユーザーが通常の`nmap -sV 172.30.0.10`を実行し、80/tcpのnginxと445/tcpのSambaを検出可能。
+  - kaliの日本語フォント選択が`Noto Sans CJK JP`となり、`LANG`・`LC_ALL`が`ja_JP.UTF-8`であることを確認済み。
 - 発見・修正した実装上の問題
   - Kali(tigervnc-standalone-server)には`vncpasswd`バイナリが含まれず、`tigervnc-tools`パッケージの追加が必要だった(`docker/kali/Dockerfile`に反映済み)。
   - 新しいTigerVNCは設定を`~/.vnc`から`~/.config/tigervnc`へ自動移行しようとするが、この移行処理が失敗し起動ループする問題があった。回避策として、`~/.vnc`を使わず最初から`~/.config/tigervnc`(xstartup・passwd)を直接使う構成に変更済み(`docker/kali/Dockerfile`・`docker/kali/entrypoint.sh`)。
-- 既知の未検証事項: kaliのnoVNCポート(6901)は、検証に使ったDockerホストでホスト側へのポート公開が反映されない事象が発生した(`HostConfig.PortBindings`は正しいが`NetworkSettings.Ports`が空)。設定(compose.yaml)自体に誤りはなく、コンテナ内部のヘルスチェック(コンテナ内から`localhost:6901`への到達)は成功しているため、Docker Desktop側の一時的な不具合の可能性が高い(直前に大量の停止コンテナ・ビルドキャッシュをpruneした影響の可能性)。次回、Docker Desktop再起動後に改めてホスト側からの到達を確認すること。
+  - Kaliに日本語フォントがなく、寿司屋HPの日本語が豆腐表示になっていた。`fonts-noto-cjk`と`ja_JP.UTF-8`ロケールをイメージへ追加して修正済み。
+  - 非rootの`player`ではNmapのraw socket作成が拒否され、`-sT`だけでもローカルネットワークのホスト探索時に失敗していた。XFCEセッション全体へのambient `NET_RAW`付与はGTKを特権実行扱いにしてデスクトップを異常終了させるため採用せず、`nmap --unprivileged`を透過的に付ける専用ラッパーで修正済み。
+  - Samba共有の日本語ディレクトリ名・ファイル名は、noVNC内で日本語入力できない環境では`cd`・`get`を実行できなかった。証拠本文は日本語のまま保ち、共有内の全パスをASCIIへ変更して修正済み。
+  - Kaliの`HOME`は`/home/player`だったが、コンテナとXFCEの作業ディレクトリが`/`で始まっていたため、`smbclient get`が書き込み不可のルート直下へ保存しようとして`Error opening local file`になっていた。Dockerfileの`WORKDIR`とTigerVNCの`xstartup`で開始位置を`/home/player`へ固定して修正済み。
 
 ### 寿司屋HP(2026-08-20実装、2026-08-21更新)
 
 - 公開ページは`/`、`/menu/`、`/kodomo-shokudo/`、`/blog/`、`/shop/`の5つを主要導線とし、`/blog/`配下に公開済み記事3本を置く。実在の店舗サイトとして、旬の寿司、税込価格、営業時間、所在地、座席、駐車場、子連れ利用、こども食堂、店からの継続的な発信を掲載する。
 - 外部CDN・Webフォント・地図・画像サービスには依存せず、CSS/JavaScript/料理写真をコンテナへ同梱する。地域の寿司店を探す客へ内容が伝わるよう、ページ別description、canonical、サイトマップ、Restaurant構造化データを含める。
-- 第1章の隠しページは`/admin/`(初期パスワード命名規則)と`/backup/`(神崎のローマ字表記・2019年入社)。公開ナビゲーションとサイトマップには載せず、DIRB同梱の標準`common.txt`に含まれる一般的なディレクトリ名として、通常のディレクトリ列挙で発見させる。正解専用のカスタムワードリストは用意しない。公開ブログ`/blog/`とバックアップに残った未公開下書き`/backup/`を分け、下書きの存在が不自然にならない構成にする。
+- 第1章の隠しページは`/admin/`(アカウントID・初期パスワード命名規則)と`/backup/`(神崎のローマ字表記・2019年入社)。公開ナビゲーションとサイトマップには載せず、DIRB同梱の標準`common.txt`に含まれる一般的なディレクトリ名として、通常のディレクトリ列挙で発見させる。正解専用のカスタムワードリストは用意しない。公開ブログ`/blog/`とバックアップに残った未公開下書き`/backup/`を分け、下書きの存在が不自然にならない構成にする。
 - nginxは専用設定で静的ページ・UTF-8・カスタム404・同梱アセットのキャッシュを処理する。ローカルDockerイメージのビルドと、コンテナ内HTTPで`/admin/`・`/backup/`が200、旧URL`/staff-notice/`・`/blog-drafts/`が404になることを検証済み。
+
+### Samba共有(2026-08-22実装)
+
+- 寿司屋サーバーのTCP 445でSMB2以降のみを受け付け、NetBIOSと`nmbd`は使用しない。共有名は`staff`、認証ユーザーは`kanzaki`とし、匿名アクセスを拒否する。
+- `staff`は`/srv/samba/staff`を公開する読み取り専用共有で、`kanzaki`だけが閲覧できる。証拠資料は「こども食堂の調査記録」(`01_child_records`)、「顧客管理」(`02_customer_records`)、「職員情報」(`03_staff_records`)の3分類と`README.txt`で構成する。プレイヤーが操作するパスとファイル名はすべてASCII、証拠本文はUTF-8の日本語とする。笑真の記録は`01_child_records/sasaki_ema.txt`。
+- 第1章の`/admin/`にアカウントIDの命名規則、`/backup/`に神崎の姓のローマ字表記と入社年を置く。プレイヤーは2ページを組み合わせ、アカウントID`kanzaki`と初期パスワード`Kanzaki2019`の両方を規則から導出する。
+- Samba資料から次段階へ進む導線として、社内メールのURLを`http://www.mikuriya-suisan.local/webmail/`に確定した。メールクライアント本体はこのパスへ後続実装する。
+- Composeの寿司サーバーヘルスチェックはHTTP応答と`smbcontrol smbd ping`の両方を確認する。ローカルDockerイメージのビルド、`testparm`、Kali同梱の`smbclient`を用いた統合テストを実施し、正規認証での共有列挙・`/home/player`から追加の`lcd`なしで行うASCII名の日本語本文ファイル取得、匿名アクセス拒否、誤パスワード拒否、書き込み拒否を確認済み。
+- Kali同梱の`smbclient -L`は、有効な共有一覧を表示した後に旧式のワークグループ列挙をSMB1で再試行し、`Unable to connect with SMB1 -- no workgroup available`と表示する。認証やSMB2/3接続の失敗ではなくコマンドの終了コードも0であるため、SMB1を有効化せず、調査ノートの操作例では`staff`共有が表示されていれば成功であることを補足する。
 
 ## 未決定事項
 

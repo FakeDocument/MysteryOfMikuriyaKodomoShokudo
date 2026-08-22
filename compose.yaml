@@ -12,7 +12,7 @@ networks:
     ipam:
       driver: default
       config:
-        - subnet: 172.20.0.0/24
+        - subnet: 172.30.0.0/24
   kali-uplink: {}
   notebook-net: {}
 
@@ -51,9 +51,9 @@ services:
     hostname: www-mikuriya-suisan
     networks:
       target-net:
-        ipv4_address: 172.20.0.10
+        ipv4_address: 172.30.0.10
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost/"]
+      test: ["CMD-SHELL", "curl -fsS http://localhost/ >/dev/null && smbcontrol smbd ping >/dev/null"]
       interval: 10s
       timeout: 3s
       retries: 10
@@ -69,7 +69,7 @@ services:
     hostname: portal-kaiiki-hozen
     networks:
       target-net:
-        ipv4_address: 172.20.0.20
+        ipv4_address: 172.30.0.20
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost/"]
       interval: 10s
@@ -86,11 +86,11 @@ services:
     container_name: sushictf-kali
     networks:
       target-net:
-        ipv4_address: 172.20.0.5
+        ipv4_address: 172.30.0.5
       kali-uplink: {}
     extra_hosts:
-      - "www.mikuriya-suisan.local:172.20.0.10"
-      - "portal.kaiiki-hozen.local:172.20.0.20"
+      - "www.mikuriya-suisan.local:172.30.0.10"
+      - "portal.kaiiki-hozen.local:172.30.0.20"
     ports:
       - "127.0.0.1:6901:6901"
     shm_size: "1gb"
