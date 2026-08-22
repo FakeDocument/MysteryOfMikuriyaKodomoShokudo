@@ -217,7 +217,7 @@ Samba資料の役割を「認証情報の提供」から「メールクライア
   - 簡易テキストエディタ(mousepadなど) — 取得ファイルの閲覧
   - DIRB同梱の標準`/usr/share/dirb/wordlists/common.txt`ワードリスト(隠しディレクトリ名はこのリストに含まれる一般名から選び、正解専用のカスタムワードリストは用意しない)
 - ランチャーやデスクトップ上のアイコンは、この最小ツールセットのみを並べ、初心者がメニューで迷わないようにする。
-- 日本語ページと取得証拠を正しく表示するため、Kaliイメージへ`fonts-noto-cjk`を同梱し、デスクトップのロケールを`ja_JP.UTF-8`に固定する。
+- 日本語ページと取得証拠を正しく表示するため、Kaliイメージへ`fonts-noto-cjk`を同梱し、デスクトップのロケールを`ja_JP.UTF-8`に固定する。Firefox ESRには`firefox-esr-l10n-ja`を同梱し、Firefoxポリシーの`RequestedLocales`で日本語を既定言語にする。
 - noVNC内のKali操作では日本語入力を要求しない。プレイヤーがターミナルや`smbclient`で入力するパス、ファイル名、ユーザー名、パスワードはASCIIだけで完結させ、日本語は画面・証拠本文の閲覧に用いる。日本語のAnswer入力はホスト側ブラウザで開く調査ノートUIに限定する。
 - KaliコンテナとXFCEセッションの作業ディレクトリは`/home/player`から開始する。`smbclient`の`get`など、ローカル側へファイルを書き出す初心者向け手順が追加の`lcd`なしで成功する構成とする。
 - `nmap`はraw socket権限を要求しないTCP connect scanで動かす。`/usr/local/bin/nmap`から`/usr/bin/nmap --unprivileged`を呼ぶラッパーを同梱し、プレイヤーは通常どおり`nmap -sV <IP>`を入力できる構成とする。Kaliコンテナへの`privileged`や`NET_RAW`追加は行わない。
@@ -269,7 +269,7 @@ Samba資料の役割を「認証情報の提供」から「メールクライア
 - `docker/notebook/`: uv管理のFastAPIアプリ。`/healthz`とプレースホルダーのトップページのみ。進捗保存・Flag判定は未実装。
 - `docker/sushi/`: nginx(静的HP)+ Samba。寿司屋HPの公開ページ、第1章の隠しページ、神崎のSamba共有は実装済み。御厨メールクライアント(SQLi対象)は未実装。
 - `docker/portal/`: nginx(root, 80番)がリバースプロキシし、backendのFastAPIアプリを`www-data`ユーザーで`setpriv`により127.0.0.1:8000で動かす構成。これはコマンドインジェクションで取得させる実行ユーザーを`www-data`に固定するための設計判断。疎通確認機能・組織概要ページ・OSコマンドインジェクションは未実装。
-- `docker/kali/`: `kalilinux/kali-rolling`ベース。XFCE + TigerVNC + noVNC(6901) + 最小ツール(nmap, gobuster, dirb, smbclient, curl, firefox-esr, mousepad, xfce4-terminal) + Noto CJK日本語フォント。ロケールは`ja_JP.UTF-8`。VNCパスワードは環境変数`VNC_PASSWORD`(既定値`sushictf`)。ディレクトリ列挙にはDIRB同梱の標準`/usr/share/dirb/wordlists/common.txt`を使用し、正解専用のカスタムワードリストは置かない。Kaliイメージ内の同リストに`admin`と`backup`が含まれることを実装検証済み。`nmap`は非特権ラッパーを介して実行する。
+- `docker/kali/`: `kalilinux/kali-rolling`ベース。XFCE + TigerVNC + noVNC(6901) + 最小ツール(nmap, gobuster, dirb, smbclient, curl, firefox-esr, mousepad, xfce4-terminal) + Noto CJK日本語フォント。ロケールは`ja_JP.UTF-8`。Firefox ESRは日本語言語パックとポリシーにより、UIの既定言語を日本語にする。VNCパスワードは環境変数`VNC_PASSWORD`(既定値`sushictf`)。ディレクトリ列挙にはDIRB同梱の標準`/usr/share/dirb/wordlists/common.txt`を使用し、正解専用のカスタムワードリストは置かない。Kaliイメージ内の同リストに`admin`と`backup`が含まれることを実装検証済み。`nmap`は非特権ラッパーを介して実行する。
 - `launcher/`: macOS用`.command`(start/stop/reset)とWindows用`.bat`(start/stop/reset)。startはDocker起動確認→`pull`→`up -d`→ヘルスチェック待ち→ブラウザ自動オープン(調査ノートUIとnoVNC)を行う。
 - ビルド検証: `docker compose config`で構文確認済み。4サービス全てローカルビルド成功(ローカルの`docker build`によるもので、まだGHCRへのマルチアーキpush・バージョンタグ運用は未着手)。
 - 起動検証: 当初の`172.20.0.0/24`は検証環境の`devcontainer_default`(`172.20.0.0/16`)と衝突したため、2026-08-22に`target-net`を`172.30.0.0/24`へ変更した。変更後のCompose構成で以下を確認済み。
@@ -280,6 +280,7 @@ Samba資料の役割を「認証情報の提供」から「メールクライア
   - ホスト側から`127.0.0.1:6901`(noVNC)と`127.0.0.1:8080`(調査ノートUI)へ到達可能。
   - kaliの`player`ユーザーが通常の`nmap -sV 172.30.0.10`を実行し、80/tcpのnginxと445/tcpのSambaを検出可能。
   - kaliの日本語フォント選択が`Noto Sans CJK JP`となり、`LANG`・`LC_ALL`が`ja_JP.UTF-8`であることを確認済み。
+  - kaliのFirefox ESRへ日本語言語パックを追加し、新規プロファイルで言語パックが有効化され、要求ロケールが`ja,en-US`になることを確認済み。
 - 発見・修正した実装上の問題
   - Kali(tigervnc-standalone-server)には`vncpasswd`バイナリが含まれず、`tigervnc-tools`パッケージの追加が必要だった(`docker/kali/Dockerfile`に反映済み)。
   - 新しいTigerVNCは設定を`~/.vnc`から`~/.config/tigervnc`へ自動移行しようとするが、この移行処理が失敗し起動ループする問題があった。回避策として、`~/.vnc`を使わず最初から`~/.config/tigervnc`(xstartup・passwd)を直接使う構成に変更済み(`docker/kali/Dockerfile`・`docker/kali/entrypoint.sh`)。

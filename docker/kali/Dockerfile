@@ -6,7 +6,7 @@ RUN apt-get update \
         xfce4 xfce4-terminal dbus-x11 \
         tigervnc-standalone-server tigervnc-common tigervnc-tools \
         novnc websockify \
-        firefox-esr mousepad \
+        firefox-esr firefox-esr-l10n-ja mousepad \
         nmap gobuster smbclient curl \
     && rm -rf /var/lib/apt/lists/*
 
@@ -28,6 +28,7 @@ ENV LANG=ja_JP.UTF-8 \
 RUN useradd --create-home --shell /bin/bash player
 
 COPY config/xstartup /home/player/.config/tigervnc/xstartup
+COPY config/firefox-policies.json /usr/share/firefox-esr/distribution/policies.json
 COPY bin/nmap /usr/local/bin/nmap
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /home/player/.config/tigervnc/xstartup /usr/local/bin/nmap /entrypoint.sh \
