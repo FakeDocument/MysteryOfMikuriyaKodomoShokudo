@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "chapter_files": [
+    "prologue.json",
+    "chapter-1.json",
+    "chapter-2.json",
+    "chapter-3.json",
+    "chapter-4.json",
+    "chapter-5.json",
+    "finale.json"
+  ]
+}

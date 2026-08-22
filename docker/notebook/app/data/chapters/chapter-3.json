@@ -1,0 +1,181 @@
+{
+  "version": 2,
+  "chapter": {
+    "id": "chapter-3",
+    "number": "三",
+    "nav_title": "政府への糸",
+    "title": "御厨のメールを追う",
+    "date": "調査三日目",
+    "eyebrow": "CHAPTER 03 / WEBMAIL",
+    "status_label": "通信記録",
+    "available": true,
+    "objective": "社内Webメールの検索機能を調べ、御厨と片柳の連絡から次の調査対象を特定する。",
+    "lead": "神崎の受信箱にあるのは勤務表と発注連絡だけ。しかし、古い検索画面は別の利用者のメールまで抱え込んでいた。",
+    "blocks": [
+      {
+        "type": "dialogue",
+        "id": "initial-conversation",
+        "heading": {
+          "number": "01",
+          "kicker": "CONVERSATION LOG",
+          "title": "所長との作戦会議"
+        },
+        "messages": [
+          {
+            "speaker": "director",
+            "text": "神崎の受信箱は平和そのものですね。ですが古いシステムは、持ち主より正直なことがあります。検索欄を少し困らせてみてください。"
+          },
+          {
+            "speaker": "player",
+            "text": "『少し困らせる』で不正アクセスをごまかさないでくださいよ……。検索の仕組みを確かめます。"
+          }
+        ]
+      },
+      {
+        "type": "evidence_note",
+        "id": "evidence-note",
+        "heading": {
+          "number": "02",
+          "kicker": "EVIDENCE MEMO",
+          "title": "見つけた証拠"
+        },
+        "label": "調査中に確認した事実や、気になった言葉を自由に書き留める",
+        "placeholder": "例：見つけたページ、人物名、数字、気になった表現……",
+        "action_label": "証拠を貼り込む"
+      },
+      {
+        "type": "dialogue",
+        "id": "after-note",
+        "visible_when": {
+          "event": "note_saved"
+        },
+        "heading": {
+          "kicker": "FOLLOW-UP",
+          "title": "証拠メモを受けて"
+        },
+        "messages": [
+          {
+            "speaker": "player",
+            "text": "御厨と片柳のメール、見つけました。URLと認証情報もそのまま書いてあります。雑すぎませんか？"
+          },
+          {
+            "speaker": "director",
+            "text": "秘密を守る人ほど、自分の内側だけは安全だと思いたがるものです。おかげで話が早いですね。原文どおり控えてください。"
+          }
+        ]
+      },
+      {
+        "type": "questions",
+        "id": "investigation",
+        "heading": {
+          "number": "03",
+          "kicker": "INVESTIGATION",
+          "title": "調査結果を書き込む"
+        },
+        "items": [
+          {
+            "type": "question",
+            "id": "ch3_portal_url",
+            "label": "調査 01",
+            "prompt": "片柳が案内した内部ポータルのURLは？",
+            "placeholder": "http:// から入力",
+            "input_mode": "url",
+            "blocks": [
+              {
+                "type": "hints",
+                "id": "hints",
+                "items": [
+                  "ログイン画面ではなく、ログイン後のメール検索欄を調べる。",
+                  "検索語に `' OR 1=1 -- ` を入力し、他利用者のメール本文が結果へ混ざるか確認する。"
+                ]
+              },
+              {
+                "type": "dialogue",
+                "id": "follow-up",
+                "visible_when": {
+                  "event": "question_solved"
+                },
+                "heading": {
+                  "kicker": "FOLLOW-UP",
+                  "title": "調査結果を受けて"
+                },
+                "messages": [
+                  {
+                    "speaker": "player",
+                    "text": "次は海域保全対策室の内部ポータル。寿司屋とは別のサーバーです。……これ、ただの失踪事件じゃないですよね。"
+                  },
+                  {
+                    "speaker": "director",
+                    "text": "ようやく気づきましたか。面白いですね。町の寿司屋から政府の内側へ――事件の景色が変わってきました。"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "question",
+            "id": "ch3_portal_user",
+            "label": "調査 02",
+            "prompt": "外部協力者アカウントのユーザー名は？",
+            "placeholder": "ユーザー名",
+            "input_mode": "latin",
+            "blocks": [
+              {
+                "type": "dialogue",
+                "id": "follow-up",
+                "visible_when": {
+                  "event": "question_solved"
+                },
+                "heading": {
+                  "kicker": "FOLLOW-UP",
+                  "title": "調査結果を受けて"
+                },
+                "messages": [
+                  {
+                    "speaker": "player",
+                    "text": "ユーザー名は mikuriya-partner。御厨水産向けの外部協力者アカウントです。"
+                  },
+                  {
+                    "speaker": "director",
+                    "text": "『閲覧・報告以外はお控えください』だそうですよ。実に丁寧なお願いです。どこまでできるかは、中に入ってから考えましょう。"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "question",
+            "id": "ch3_portal_password",
+            "label": "調査 03",
+            "prompt": "外部協力者アカウントのパスワードは？",
+            "placeholder": "記号・大文字・小文字を区別して入力",
+            "input_mode": "latin",
+            "blocks": [
+              {
+                "type": "dialogue",
+                "id": "follow-up",
+                "visible_when": {
+                  "event": "question_solved"
+                },
+                "heading": {
+                  "kicker": "FOLLOW-UP",
+                  "title": "調査結果を受けて"
+                },
+                "messages": [
+                  {
+                    "speaker": "player",
+                    "text": "パスワードも確認しました。これで政府のポータルに入れます。……所長、最初からここまで見えてたんですか？"
+                  },
+                  {
+                    "speaker": "director",
+                    "text": "まさか。私はキミより少しだけ先に気づいて、知らないふりで待っているだけです。さて、証拠を整理したら次へ行きましょう。ここから先は、連中の内側です。"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

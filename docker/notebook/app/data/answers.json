@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "answers": {
+    "prologue_requester": {
+      "accepted": [
+        "遠藤美咲",
+        "えんどうみさき",
+        "エンドウミサキ"
+      ]
+    },
+    "prologue_missing": {
+      "accepted": [
+        "佐々木笑真",
+        "ささきえま",
+        "ササキエマ"
+      ]
+    },
+    "ch1_web_port": {
+      "accepted": [
+        "80",
+        "80/tcp",
+        "tcp/80"
+      ]
+    },
+    "ch1_smb_port": {
+      "accepted": [
+        "445",
+        "445/tcp",
+        "tcp/445"
+      ]
+    },
+    "ch1_samba_user": {
+      "accepted": [
+        "kanzaki"
+      ]
+    },
+    "ch1_samba_password": {
+      "accepted": [
+        "Kanzaki2019"
+      ],
+      "validation": "exact",
+      "incorrect_message": "文字の大文字・小文字と、入社年をもう一度確認しよう。"
+    },
+    "ch2_selection_conditions": {
+      "validation": "contains_all",
+      "required_terms": [
+        "孤立",
+        "肉付き"
+      ]
+    },
+    "ch2_government_contact": {
+      "accepted": [
+        "片柳修治",
+        "かたやなぎしゅうじ",
+        "カタヤナギシュウジ"
+      ]
+    },
+    "ch2_webmail_login": {
+      "accepted": [
+        "hitomi.kanzaki@mikuriya-suisan.local"
+      ]
+    },
+    "ch3_portal_url": {
+      "accepted": [
+        "http://portal.kaiiki-hozen.local",
+        "http://portal.kaiiki-hozen.local/"
+      ]
+    },
+    "ch3_portal_user": {
+      "accepted": [
+        "mikuriya-partner"
+      ]
+    },
+    "ch3_portal_password": {
+      "accepted": [
+        "%XO1AEFmvwHqmdik"
+      ],
+      "validation": "exact",
+      "incorrect_message": "記号を含め、メール本文から一文字ずつ正確に転記しよう。"
+    }
+  }
+}

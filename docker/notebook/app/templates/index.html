@@ -2,10 +2,82 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <title>九十九探偵事務所 調査ノート</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#18362f">
+  <meta name="description" content="九十九探偵事務所の事件調査ノート">
+  <title>九十九探偵事務所｜調査ノート</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='/notebook.css') }}">
+  <script>
+    window.NOTEBOOK_DATA = {{ {"chapters": chapters, "progress": progress} | tojson }};
+  </script>
+  <script src="{{ url_for('static', path='/notebook.js') }}" defer></script>
 </head>
 <body>
-  <h1>九十九探偵事務所 調査ノート</h1>
-  <p>準備中です。</p>
+  <a class="skip-link" href="#notebook-page">調査ノート本文へ移動</a>
+
+  <div class="desk-shell">
+    <header class="office-header" aria-label="アプリケーション情報">
+      <div class="office-mark" aria-hidden="true">九</div>
+      <div class="office-title">
+        <span>TSUKUMO DETECTIVE OFFICE</span>
+        <strong>九十九探偵事務所</strong>
+      </div>
+      <div class="case-meta">
+        <span>事件番号</span>
+        <strong>九十九–〇〇一</strong>
+      </div>
+    </header>
+
+    <div class="notebook-frame">
+      <aside class="chapter-index" aria-label="調査章一覧">
+        <div class="index-heading">
+          <span>INDEX</span>
+          <strong>調査目録</strong>
+        </div>
+        <nav id="chapter-tabs" class="chapter-tabs"></nav>
+        <div class="progress-card" aria-label="現在の調査進捗">
+          <div class="progress-copy">
+            <span>記録済み</span>
+            <strong id="progress-count">0 / 0</strong>
+          </div>
+          <div class="progress-track" aria-hidden="true">
+            <span id="progress-fill"></span>
+          </div>
+        </div>
+      </aside>
+
+      <main id="notebook-page" class="notebook-page" tabindex="-1">
+        <div class="paper-margin" aria-hidden="true"></div>
+        <div class="page-content">
+          <header class="chapter-header">
+            <div>
+              <p id="chapter-eyebrow" class="chapter-eyebrow"></p>
+              <h1 id="chapter-title"></h1>
+            </div>
+            <div class="chapter-stamp">
+              <span id="chapter-status"></span>
+              <strong id="chapter-date"></strong>
+            </div>
+          </header>
+
+          <section class="case-brief" aria-labelledby="objective-heading">
+            <div class="paperclip" aria-hidden="true"></div>
+            <span id="objective-heading">今回の調査目的</span>
+            <strong id="chapter-objective"></strong>
+            <p id="chapter-lead"></p>
+          </section>
+
+          <div id="chapter-blocks" class="chapter-blocks"></div>
+
+          <footer class="page-footer">
+            <span id="page-number">— 01 —</span>
+            <span>九十九探偵事務所　部外秘</span>
+          </footer>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
 </body>
 </html>

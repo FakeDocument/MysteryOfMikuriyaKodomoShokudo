@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "chapter": {
+    "id": "chapter-4",
+    "number": "四",
+    "nav_title": "海域保全対策室",
+    "title": "海域保全対策室",
+    "date": "証拠待ち",
+    "eyebrow": "CHAPTER 04",
+    "status_label": "未開封",
+    "available": false,
+    "objective": "内部ポータルを調査する。",
+    "lead": "次の調査記録は、まだ封が切られていない。",
+    "blocks": []
+  }
+}

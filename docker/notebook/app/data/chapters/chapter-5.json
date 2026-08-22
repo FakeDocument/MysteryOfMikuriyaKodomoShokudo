@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "chapter": {
+    "id": "chapter-5",
+    "number": "五",
+    "nav_title": "機密文書",
+    "title": "機密文書",
+    "date": "証拠待ち",
+    "eyebrow": "CHAPTER 05",
+    "status_label": "未開封",
+    "available": false,
+    "objective": "政府サーバー内部の資料を調査する。",
+    "lead": "このページを開くには、さらに証拠が必要だ。",
+    "blocks": []
+  }
+}

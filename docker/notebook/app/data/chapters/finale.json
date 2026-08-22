@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "chapter": {
+    "id": "finale",
+    "number": "終",
+    "nav_title": "調査報告書",
+    "title": "調査報告書",
+    "date": "未作成",
+    "eyebrow": "FINAL REPORT",
+    "status_label": "未開封",
+    "available": false,
+    "objective": "すべての証拠をつなぎ、笑真の引き渡しを阻止する。",
+    "lead": "最後のページは、まだ白紙のままだ。",
+    "blocks": []
+  }
+}
