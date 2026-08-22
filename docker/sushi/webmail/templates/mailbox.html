@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{{ folder_labels[folder] }}{% endblock %}
+{% block content %}
+  <section class="window">
+    <div class="window-title">{{ folder_labels[folder] }}</div>
+    <div class="window-body no-padding">
+      <div class="folder-summary">{{ messages|length }} 件のメールがあります。</div>
+      <table class="mail-list">
+        <thead>
+          <tr>
+            <th>日時</th>
+            <th>{% if folder == "inbox" %}差出人{% else %}宛先{% endif %}</th>
+            <th>件名</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for message in messages %}
+            <tr>
+              <td class="date-cell">{{ message.sent_at }}</td>
+              <td>{% if folder == "inbox" %}{{ message.sender }}{% else %}{{ message.recipient }}{% endif %}</td>
+              <td><a href="/message?{{ message.id|urlencode }}">{{ message.subject }}</a></td>
+            </tr>
+          {% else %}
+            <tr><td colspan="3" class="empty-cell">メールはありません。</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endblock %}

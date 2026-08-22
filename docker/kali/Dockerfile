@@ -16,18 +16,26 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends fonts-noto-cjk locales \
+    && apt-get install -y --no-install-recommends \
+        fonts-noto-cjk locales \
+        fcitx5 fcitx5-mozc fcitx5-frontend-gtk3 \
     && sed -i 's/^# *ja_JP.UTF-8 UTF-8/ja_JP.UTF-8 UTF-8/' /etc/locale.gen \
     && locale-gen \
     && rm -rf /var/lib/apt/lists/*
 
 ENV LANG=ja_JP.UTF-8 \
     LANGUAGE=ja_JP:ja \
-    LC_ALL=ja_JP.UTF-8
+    LC_ALL=ja_JP.UTF-8 \
+    GTK_IM_MODULE=fcitx \
+    QT_IM_MODULE=fcitx \
+    XMODIFIERS=@im=fcitx
 
 RUN useradd --create-home --shell /bin/bash player
 
 COPY config/xstartup /home/player/.config/tigervnc/xstartup
+COPY config/fcitx5-autostart.desktop /home/player/.config/autostart/fcitx5.desktop
+COPY config/fcitx5-config /home/player/.config/fcitx5/config
+COPY config/fcitx5-profile /home/player/.config/fcitx5/profile
 COPY config/firefox-policies.json /usr/share/firefox-esr/distribution/policies.json
 COPY bin/nmap /usr/local/bin/nmap
 COPY entrypoint.sh /entrypoint.sh

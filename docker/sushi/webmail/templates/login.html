@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}ログイン{% endblock %}
+{% block content %}
+  <section class="window login-window">
+    <div class="window-title">ユーザーログイン</div>
+    <div class="window-body">
+      {% if login_error %}<div class="error-box">{{ login_error }}</div>{% endif %}
+      <div class="notice-box">
+        社内メールを利用するには、業務メールアドレスとパスワードを入力してください。
+      </div>
+      <form method="post" action="/login" autocomplete="off">
+        <table class="form-table">
+          <tr>
+            <th><label for="email">メールアドレス</label></th>
+            <td><input id="email" name="email" type="text" autocomplete="username"></td>
+          </tr>
+          <tr>
+            <th><label for="password">パスワード</label></th>
+            <td><input id="password" name="password" type="password" autocomplete="current-password"></td>
+          </tr>
+        </table>
+        <div class="button-row"><button type="submit">ログイン</button></div>
+      </form>
+      <p class="small-note">※ パスワードを忘れた場合はIT担当者へ連絡してください。</p>
+    </div>
+  </section>
+{% endblock %}

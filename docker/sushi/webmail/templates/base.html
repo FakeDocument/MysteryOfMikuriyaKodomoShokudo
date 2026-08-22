@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{% endblock %} - 御厨水産 社内Webメール</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="masthead">
+      <div class="logo-mark">御</div>
+      <div>
+        <div class="product-name">御厨水産 社内Webメール</div>
+        <div class="product-version">Mikuriya WebMail System Version 2.4</div>
+      </div>
+    </header>
+
+    <div class="user-bar">
+      {% if user %}
+        <span class="status-online">● 接続中</span>　利用者：{{ user.display_name }} &lt;{{ user.email }}&gt;
+      {% else %}
+        <span class="status-offline">● 未ログイン</span>
+      {% endif %}
+    </div>
+
+    {% if user %}
+      <nav class="toolbar">
+        <a class="tool-button" href="/inbox?folder=inbox">受信箱</a>
+        <a class="tool-button" href="/inbox?folder=sent">送信済み</a>
+        <a class="tool-button" href="/search">メール検索</a>
+        <a class="tool-button tool-logout" href="/logout">ログアウト</a>
+      </nav>
+    {% endif %}
+
+    <main class="main-panel">
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+      Copyright (C) 2011 Mikuriya Suisan. All Rights Reserved.<br>
+      店舗内ネットワーク専用システム　｜　推奨環境 Internet Explorer 8.0 以上
+    </footer>
+  </div>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{{ message.subject }}{% endblock %}
+{% block content %}
+  <section class="window">
+    <div class="window-title">メール表示</div>
+    <div class="window-body no-padding">
+      <table class="message-header">
+        <tr><th>件名</th><td>{{ message.subject }}</td></tr>
+        <tr><th>差出人</th><td>{{ message.sender }}</td></tr>
+        <tr><th>宛先</th><td>{{ message.recipient }}</td></tr>
+        <tr><th>日時</th><td>{{ message.sent_at }}</td></tr>
+      </table>
+      <pre class="message-body">{{ message.body }}</pre>
+    </div>
+  </section>
+{% endblock %}

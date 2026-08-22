@@ -2,10 +2,13 @@
 ============================
 
 社内メールURL:
-http://www.mikuriya-suisan.local/webmail/
+http://mail.mikuriya-suisan.local/
 
 ログインID:
 職員名簿に記載された業務メールアドレス
+
+パスワード:
+社内システム共通のパスワード
 
 運用メモ:
 この社内メールは旧式システムを継続利用しています。

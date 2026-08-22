@@ -1,0 +1,367 @@
+:root {
+  color-scheme: light;
+  font-family: "MS PGothic", "ＭＳ Ｐゴシック", Osaka, Arial, sans-serif;
+  color: #111;
+  background: #b9c0c8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 18px 8px 36px;
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.14) 0, rgba(255, 255, 255, 0.14) 1px, transparent 1px, transparent 3px),
+    #aeb6c0;
+  font-size: 13px;
+}
+
+a {
+  color: #0000bb;
+  text-decoration: underline;
+}
+
+a:visited {
+  color: #551a8b;
+}
+
+.page-shell {
+  width: min(960px, 100%);
+  min-height: 610px;
+  margin: 0 auto;
+  border: 2px outset #e7e7e7;
+  background: #d9d9d9;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.28);
+}
+
+.masthead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 78px;
+  padding: 10px 16px;
+  color: #fff;
+  border-bottom: 3px double #fff;
+  background: linear-gradient(90deg, #0a2f73 0, #194f9d 54%, #879fc4 100%);
+}
+
+.logo-mark {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  color: #082a65;
+  border: 3px ridge #ddd;
+  background: #f4f4e7;
+  font-family: serif;
+  font-size: 31px;
+  font-weight: bold;
+}
+
+.product-name {
+  font-family: serif;
+  font-size: 24px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.product-version {
+  margin-top: 5px;
+  color: #e1e9f7;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+}
+
+.user-bar {
+  padding: 5px 9px;
+  border-top: 1px solid #6f6f6f;
+  border-bottom: 1px solid #777;
+  background: #ece8d7;
+  font-size: 12px;
+}
+
+.status-online {
+  color: #087410;
+  font-weight: bold;
+}
+
+.status-offline {
+  color: #777;
+  font-weight: bold;
+}
+
+.toolbar {
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  border-bottom: 1px solid #777;
+  background: #c6c6c6;
+}
+
+.tool-button,
+button {
+  display: inline-block;
+  min-width: 92px;
+  padding: 5px 12px;
+  color: #111;
+  border: 2px outset #eee;
+  background: #d8d8d8;
+  font: inherit;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.tool-button:visited {
+  color: #111;
+}
+
+.tool-button:active,
+button:active {
+  border-style: inset;
+}
+
+.tool-logout {
+  margin-left: auto;
+}
+
+.main-panel {
+  min-height: 440px;
+  padding: 12px;
+  background: #efefef;
+}
+
+.window {
+  margin-bottom: 12px;
+  border: 2px outset #eee;
+  background: #d4d4d4;
+}
+
+.login-window {
+  width: min(610px, 96%);
+  margin: 48px auto 0;
+}
+
+.window-title {
+  padding: 5px 8px;
+  color: #fff;
+  border-bottom: 1px solid #001a4c;
+  background: #154483;
+  font-weight: bold;
+}
+
+.window-body {
+  padding: 14px;
+}
+
+.no-padding {
+  padding: 0;
+}
+
+.notice-box,
+.error-box {
+  margin: 0 0 12px;
+  padding: 9px 10px;
+  border: 1px solid #8a8a8a;
+  background: #fffde1;
+}
+
+.error-box {
+  color: #8b0000;
+  border-color: #ad4e4e;
+  background: #fff0f0;
+  font-weight: bold;
+}
+
+.db-error {
+  display: inline-block;
+  margin-top: 4px;
+  font-family: "Courier New", monospace;
+  font-weight: normal;
+}
+
+.form-table,
+.message-header {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.form-table {
+  table-layout: fixed;
+}
+
+.form-table th,
+.form-table td,
+.message-header th,
+.message-header td {
+  padding: 6px 8px;
+  border: 1px solid #8d8d8d;
+}
+
+.form-table th,
+.message-header th {
+  width: 160px;
+  background: #d8e0eb;
+  text-align: right;
+}
+
+.form-table th {
+  white-space: nowrap;
+}
+
+.form-table td {
+  min-width: 0;
+}
+
+input[type="text"],
+input[type="password"] {
+  max-width: 100%;
+  padding: 3px 4px;
+  border: 2px inset #eee;
+  background: #fff;
+  font: 13px "Courier New", monospace;
+}
+
+.form-table input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.button-row {
+  margin-top: 12px;
+  text-align: center;
+}
+
+.small-note {
+  margin: 9px 0 0;
+  color: #555;
+  font-size: 11px;
+}
+
+.folder-summary,
+.search-summary {
+  padding: 6px 9px;
+  border-bottom: 1px solid #8d8d8d;
+  background: #f5f2df;
+  font-weight: bold;
+}
+
+.mail-list {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+}
+
+.mail-list th,
+.mail-list td {
+  padding: 6px 7px;
+  border: 1px solid #aaa;
+  text-align: left;
+  vertical-align: top;
+}
+
+.mail-list th {
+  background: #cbd6e6;
+}
+
+.mail-list tbody tr:nth-child(even) {
+  background: #f1f1e8;
+}
+
+.date-cell {
+  width: 135px;
+  white-space: nowrap;
+}
+
+.empty-cell {
+  padding: 22px !important;
+  color: #555;
+  background: #fff;
+  text-align: center !important;
+}
+
+.message-body {
+  min-height: 250px;
+  margin: 0;
+  padding: 18px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  border-top: 1px solid #888;
+  background: #fff;
+  font: 13px/1.65 "MS Gothic", "ＭＳ ゴシック", monospace;
+}
+
+.search-form {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 4px;
+}
+
+.search-form label {
+  font-weight: bold;
+}
+
+.search-form input {
+  width: min(480px, 100%);
+}
+
+.search-result {
+  margin: 12px 0;
+  border: 2px outset #ddd;
+  background: #fff;
+}
+
+.search-result .message-header th {
+  width: 100px;
+  text-align: left;
+}
+
+.search-body {
+  min-height: 0;
+  max-height: none;
+}
+
+footer {
+  padding: 10px;
+  color: #555;
+  border-top: 1px solid #777;
+  background: #d5d5d5;
+  font-family: Arial, sans-serif;
+  font-size: 10px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+@media (max-width: 650px) {
+  body {
+    padding: 0;
+  }
+
+  .page-shell {
+    border-width: 0;
+    box-shadow: none;
+  }
+
+  .product-name {
+    font-size: 18px;
+  }
+
+  .toolbar {
+    flex-wrap: wrap;
+  }
+
+  .tool-logout {
+    margin-left: 0;
+  }
+
+  .form-table th,
+  .message-header th {
+    width: 125px;
+  }
+}

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}メール検索{% endblock %}
+{% block content %}
+  <section class="window">
+    <div class="window-title">メール検索</div>
+    <div class="window-body">
+      <form method="get" action="/search" class="search-form">
+        <label for="q">検索する文字列：</label>
+        <input id="q" name="q" type="text" value="{{ query or '' }}">
+        <button type="submit">検索実行</button>
+      </form>
+      <p class="small-note">件名・差出人・宛先・本文から検索します。検索例：勤務、system、iwao</p>
+    </div>
+  </section>
+
+  {% if database_error %}
+    <div class="error-box">
+      検索処理でデータベースエラーが発生しました。<br>
+      <span class="db-error">{{ database_error }}</span>
+    </div>
+  {% elif messages is not none %}
+    <div class="search-summary">検索結果：{{ messages|length }} 件</div>
+    {% for message in messages %}
+      <article class="search-result">
+        <table class="message-header">
+          <tr><th>保管先</th><td>{{ message.mailbox_owner }} / {{ folder_labels[message.folder] }}</td></tr>
+          <tr><th>件名</th><td>{{ message.subject }}</td></tr>
+          <tr><th>差出人</th><td>{{ message.sender }}</td></tr>
+          <tr><th>宛先</th><td>{{ message.recipient }}</td></tr>
+          <tr><th>日時</th><td>{{ message.sent_at }}</td></tr>
+        </table>
+        <pre class="message-body search-body">{{ message.body }}</pre>
+      </article>
+    {% else %}
+      <div class="empty-cell">該当するメールはありません。</div>
+    {% endfor %}
+  {% endif %}
+{% endblock %}

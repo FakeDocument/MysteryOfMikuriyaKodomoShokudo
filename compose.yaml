@@ -42,7 +42,7 @@ services:
       start_period: 5s
     restart: unless-stopped
 
-  # 標的側: 寿司屋サーバー(HP + Samba)
+  # 標的側: 寿司屋サーバー(HP + 社内Webメール + Samba)
   sushi:
     build:
       context: ./docker/sushi
@@ -53,7 +53,7 @@ services:
       target-net:
         ipv4_address: 172.30.0.10
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost/ >/dev/null && smbcontrol smbd ping >/dev/null"]
+      test: ["CMD-SHELL", "curl -fsS http://localhost/ >/dev/null && curl -fsS -H 'Host: mail.mikuriya-suisan.local' http://localhost/healthz >/dev/null && smbcontrol smbd ping >/dev/null"]
       interval: 10s
       timeout: 3s
       retries: 10
@@ -90,6 +90,7 @@ services:
       kali-uplink: {}
     extra_hosts:
       - "www.mikuriya-suisan.local:172.30.0.10"
+      - "mail.mikuriya-suisan.local:172.30.0.10"
       - "portal.kaiiki-hozen.local:172.30.0.20"
     ports:
       - "127.0.0.1:6901:6901"

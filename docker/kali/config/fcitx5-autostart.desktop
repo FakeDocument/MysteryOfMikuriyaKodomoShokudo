@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Fcitx 5
+Comment=Japanese input method
+Exec=fcitx5 -d --replace
+Terminal=false
+OnlyShowIn=XFCE;
+X-GNOME-Autostart-enabled=true
