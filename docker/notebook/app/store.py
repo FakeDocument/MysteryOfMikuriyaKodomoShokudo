@@ -91,12 +91,19 @@ def get_progress(chapters: list[dict[str, Any]]) -> dict[str, Any]:
             "SELECT chapter_id, content, acknowledged, updated_at FROM notes"
         ).fetchall()
 
+    current_question_ids = {
+        question_id
+        for chapter in chapters
+        if chapter.get("available", True)
+        for question_id in chapter.get("_question_ids", [])
+    }
     answers = {
         row["question_id"]: {
             "answer": row["answer"],
             "solved_at": row["solved_at"],
         }
         for row in answer_rows
+        if row["question_id"] in current_question_ids
     }
     notes = {
         row["chapter_id"]: {

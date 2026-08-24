@@ -50,10 +50,112 @@ chapters/
 
 設問内の正解後会話には`{"event": "question_solved"}`を使います。
 
+1件以上の設問がすべて正解した後に章直下の会話や次の設問節を表示する場合は、`questions_solved`と同じ章にある設問IDを指定します。条件が付いたブロックは、指定した設問がすべて解けるまでAPIの応答にも含まれません。
+
+```json
+{
+  "type": "dialogue",
+  "id": "after-scan",
+  "visible_when": {
+    "event": "questions_solved",
+    "question_ids": ["web_service", "file_service"]
+  },
+  "heading": {
+    "kicker": "NEXT STEP",
+    "title": "次の調査へ"
+  },
+  "messages": [
+    { "speaker": "director", "text": "次の調査へ進みましょう。" }
+  ]
+}
+```
+
+次の設問をまだ見せたくない場合は、後続の`questions`ブロックにも同じ条件を付けます。
+
+```json
+{
+  "type": "questions",
+  "id": "next-investigation",
+  "visible_when": {
+    "event": "questions_solved",
+    "question_ids": ["web_service", "file_service"]
+  },
+  "heading": {
+    "number": "04",
+    "kicker": "NEXT STEP",
+    "title": "次の調査結果を記録する"
+  },
+  "items": [
+    {
+      "type": "question",
+      "id": "next_question",
+      "label": "調査 03",
+      "prompt": "次に見つけたものは？",
+      "placeholder": "調査結果",
+      "input_mode": "text",
+      "blocks": []
+    }
+  ]
+}
+```
+
+通常の設問は`placeholder`と`input_mode`で1つの回答欄を定義します。複数の値を分けて入力させる設問では、代わりに2件以上の`answer_fields`を指定できます。各欄の値は表示順に区切って結合され、`answers.json`の正解と照合されます。
+
+```json
+{
+  "type": "question",
+  "id": "example_port_service",
+  "label": "調査 01",
+  "prompt": "open の行を記録してください。",
+  "answer_fields": [
+    {
+      "id": "port",
+      "label": "ポート番号",
+      "placeholder": "例: 80",
+      "input_mode": "numeric"
+    },
+    {
+      "id": "service",
+      "label": "サービス名",
+      "placeholder": "例: http",
+      "input_mode": "latin"
+    }
+  ],
+  "blocks": []
+}
+```
+
 セリフの`speaker`は次のどちらかです。
 
 - `director`: 所長。画面左側に表示
 - `player`: 主人公（あなた）。画面右側に表示
+
+セリフの吹き出しから別画面を開かせる場合は、メッセージへ任意の`link`を追加できます。リンクは新しいタブで開き、`href`には`http`または`https`の完全なURLを指定します。
+
+```json
+{
+  "speaker": "director",
+  "text": "調査用の端末です。",
+  "link": {
+    "label": "調査端末を開く",
+    "href": "http://127.0.0.1:6901/vnc.html?autoconnect=true"
+  }
+}
+```
+
+操作説明の画像を吹き出しへ添える場合は、メッセージへ任意の`image`を追加できます。`src`は`/static/images/`配下のPNG・JPEG・WebP、`alt`は画像の内容を説明する代替テキスト、`caption`は任意の画像説明です。画像はクリックすると原寸で開きます。
+
+```json
+{
+  "speaker": "director",
+  "text": "赤丸のアイコンをクリックしてください。",
+  "image": {
+    "src": "/static/images/tutorial-terminal.png",
+    "alt": "調査端末のターミナルアイコンが赤丸で囲まれている。",
+    "caption": "赤丸で囲んだアイコンがターミナルです。"
+  }
+}
+```
 
 ## `answers.json`
 

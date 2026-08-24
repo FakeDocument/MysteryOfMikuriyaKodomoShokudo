@@ -677,6 +677,7 @@ textarea:focus-visible {
 
 .dialogue-body {
   position: relative;
+  min-width: 0;
   padding-top: 17px;
 }
 
@@ -721,6 +722,68 @@ textarea:focus-visible {
   border-left: 1px solid rgba(36, 58, 51, 0.32);
   content: "";
   transform: rotate(45deg);
+}
+
+.dialogue-link {
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  gap: 5px;
+  margin: 9px 0 0;
+  color: var(--blue);
+  font-family: var(--font-serif);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.dialogue-link::after {
+  content: "↗";
+}
+
+.dialogue-link:hover {
+  color: var(--red-dark);
+}
+
+.dialogue-link:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 3px;
+}
+
+.dialogue-image {
+  margin: 11px 0 0;
+}
+
+.dialogue-image-link {
+  display: block;
+  overflow: hidden;
+  background: #050505;
+  border: 1px solid rgba(36, 58, 51, 0.35);
+  border-radius: 5px;
+  box-shadow: 2px 3px 0 rgba(22, 40, 35, 0.1);
+  cursor: zoom-in;
+}
+
+.dialogue-image-link img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.dialogue-image-link:focus-visible {
+  outline: 3px solid var(--red);
+  outline-offset: 3px;
+}
+
+.dialogue-image figcaption {
+  margin-top: 6px;
+  color: rgba(36, 58, 51, 0.78);
+  font-family: var(--font-serif);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.6;
 }
 
 .is-player .dialogue-body p {
@@ -924,13 +987,18 @@ textarea:focus-visible {
   letter-spacing: 0.08em;
 }
 
-.question-card > label {
+.question-card > label,
+.question-prompt {
   display: block;
   margin-bottom: 12px;
   font-family: var(--font-serif);
   font-size: 16px;
   font-weight: 700;
   line-height: 1.7;
+}
+
+.question-prompt {
+  margin-top: 0;
 }
 
 .answer-row {
@@ -969,6 +1037,25 @@ textarea:focus-visible {
   color: var(--blue);
   -webkit-text-fill-color: var(--blue);
   opacity: 1;
+}
+
+.answer-fields {
+  display: grid;
+  grid-template-columns: minmax(105px, 0.65fr) minmax(180px, 1.35fr);
+  gap: 14px;
+  min-width: 0;
+}
+
+.answer-field {
+  display: grid;
+  min-width: 0;
+}
+
+.answer-field-label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
 }
 
 .answer-feedback {
@@ -1233,6 +1320,11 @@ code {
   .answer-row .ink-button {
     grid-column: 2;
     justify-self: end;
+  }
+
+  .answer-fields {
+    grid-template-columns: 1fr;
+    gap: 10px;
   }
 
   .answer-feedback,

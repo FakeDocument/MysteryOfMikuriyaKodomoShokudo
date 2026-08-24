@@ -9,8 +9,8 @@
     "eyebrow": "CHAPTER 01 / RECONNAISSANCE",
     "status_label": "初動調査",
     "available": true,
-    "objective": "寿司屋サーバーの公開サービスと隠しページを調べ、Sambaの認証情報を導き出す。",
-    "lead": "最初の調査対象は、明るく親しみやすい寿司屋のWebサイト。その裏側には、店員しか知らない入口が残されている。",
+    "objective": "寿司屋サーバーで外部から使えるWebページとファイル共有を見つけ、隠しページからSambaのログイン情報を導き出す。",
+    "lead": "所長から押しつけられたのは、聞き込みのメモではなく調査端末。最初の調査対象は、明るく親しみやすい寿司屋のサーバーだ。",
     "blocks": [
       {
         "type": "dialogue",
@@ -22,12 +22,77 @@
         },
         "messages": [
           {
+            "speaker": "player",
+            "text": "所長。この失踪、引き受けるとして……どうやって調べるんですか。聞き込みですか？"
+          },
+          {
             "speaker": "director",
-            "text": "御厨水産のWebサイトは http://www.mikuriya-suisan.local/。同じサーバーのIPは 172.30.0.10 です。まず店を見てから、キミ、開いている入口を一通り数えてみてください。"
+            "text": "聞き込み、張り込み、店で寿司をつまみながらの観察。手はいくつかあります。ですが、せっかくですから、今回は店のサーバーをハッキングしてみましょう。"
           },
           {
             "speaker": "player",
-            "text": "Webサイトの住所と、調査用のIPですね。言い方がもう泥棒なんですよ。……まずは普通に店を見てみます。"
+            "text": "ハッキング……って、それ、犯罪じゃないですか！？"
+          },
+          {
+            "speaker": "director",
+            "text": "おやおや。子どもの命がかかっているかもしれないというのに、ずいぶん細かいことを気にしますね。"
+          },
+          {
+            "speaker": "player",
+            "text": "うっ……！"
+          },
+          {
+            "speaker": "director",
+            "text": "さあ、こちらをどうぞ。調査用に用意した端末です。必要な道具は一通り入っています。ああ、本案件に関するサイトアクセスはすべてこの端末からしか行えないので注意してくださいね。",
+            "link": {
+              "label": "調査端末を開く",
+              "href": "http://127.0.0.1:6901/vnc.html?autoconnect=true"
+            }
+          },
+          {
+            "speaker": "director",
+            "text": "「調査端末を開く」を押すと、別のタブに操作画面が出ます。接続用パスワードは 99。デスクトップが表示されたら、画面下部の赤丸で囲んだターミナルのアイコンをクリックしてください。見当たらない場合は、左上のアプリケーションメニューからも開けます。",
+            "image": {
+              "src": "/static/images/tutorial-terminal.png",
+              "alt": "調査端末のデスクトップ。画面下部のターミナルアイコンが赤丸で囲まれている。",
+              "caption": "赤丸で囲んだアイコンがターミナルです。画像を押すと原寸で確認できます。"
+            }
+          },
+          {
+            "speaker": "player",
+            "text": "最初からやらせる気だったんじゃないですか。……分かりましたよ。やります。"
+          },
+          {
+            "speaker": "player",
+            "text": "それで、まずはどうすればいいんですか。"
+          },
+          {
+            "speaker": "director",
+            "text": "御厨水産のWebサイトは http://www.mikuriya-suisan.local/、同じサーバーのIPアドレスは 172.30.0.10 です。IPアドレスは、ネットワーク上にあるサーバーの住所だと思ってください。まずは、その住所で何が待ち受けているかを調べます。"
+          },
+          {
+            "speaker": "player",
+            "text": "何が待ち受けているか……どうやって調べるんです？"
+          },
+          {
+            "speaker": "director",
+            "text": "ポートスキャンを使います。ポートは建物の出入口、サービスはその奥で動いている受付のようなものです。Nmapという道具なら、開いている出入口の番号と、そこで動くサービスをまとめて確認できます。"
+          },
+          {
+            "speaker": "player",
+            "text": "なるほど。ターミナルには何を入力すれば？"
+          },
+          {
+            "speaker": "director",
+            "text": "nmap -sV 172.30.0.10 と入力して、Enterキーを押してください。-sV はサービスの種類やバージョンも調べる指定です。結果が出たら、PORT・STATE・SERVICEと並んだ表のうち、STATEが open の行を読みます。"
+          },
+          {
+            "speaker": "player",
+            "text": "まずは open の行にある、ポート番号とサービス名をそのまま読めばいいんですね。"
+          },
+          {
+            "speaker": "director",
+            "text": "ええ。今は意味を推測せず、表示された文字を正確に記録してください。それぞれが何をするサービスなのかは、結果を確認してから説明します。"
           }
         ]
       },
@@ -56,7 +121,7 @@
         "messages": [
           {
             "speaker": "player",
-            "text": "Webサイトと開いているポート、それから隠しページ。見つけたものはメモしました。"
+            "text": "ここまでに分かったことは、調査メモに残しました。"
           },
           {
             "speaker": "director",
@@ -66,27 +131,39 @@
       },
       {
         "type": "questions",
-        "id": "investigation",
+        "id": "port-scan",
         "heading": {
           "number": "03",
-          "kicker": "INVESTIGATION",
-          "title": "調査結果を書き込む"
+          "kicker": "PORT SCAN",
+          "title": "開いているポートを記録する"
         },
         "items": [
           {
             "type": "question",
-            "id": "ch1_web_port",
+            "id": "ch1_web_port_service",
             "label": "調査 01",
-            "prompt": "寿司屋のWebサイトが応答したポート番号は？",
-            "placeholder": "例: 0000",
-            "input_mode": "numeric",
+            "prompt": "Nmapの結果で最初に表示された open の行を記録してください。",
+            "answer_fields": [
+              {
+                "id": "port",
+                "label": "ポート番号",
+                "placeholder": "例: 80",
+                "input_mode": "numeric"
+              },
+              {
+                "id": "service",
+                "label": "サービス名",
+                "placeholder": "例: http",
+                "input_mode": "latin"
+              }
+            ],
             "blocks": [
               {
                 "type": "hints",
                 "id": "hints",
                 "items": [
-                  "対象ホストで開いているポートとサービスを列挙しよう。",
-                  "Kali端末で `nmap -sV 172.30.0.10` を実行し、HTTPの行を確認する。"
+                  "Nmapの表は `PORT`、`STATE`、`SERVICE` の順に並んでいます。まずは最初の `open` の行に注目しましょう。`/tcp` より左の数字を「ポート番号」、一番右の名前を「サービス名」へ書けばいいのです。",
+                  "`80/tcp  open  http` と表示されているなら、ポート番号は `80`、SERVICE名は `http`。おや、ここまで示せば、もう迷いようはありませんね。"
                 ]
               },
               {
@@ -102,11 +179,11 @@
                 "messages": [
                   {
                     "speaker": "player",
-                    "text": "80番ポートにWebサイト。店の名前は御厨水産、子ども食堂は『みくりや子ども食堂』です。"
+                    "text": "最初の行は、80番ポートの http です。"
                   },
                   {
                     "speaker": "director",
-                    "text": "善意に満ちた、よくできた看板ですね。まずは普通のお客さんの目で読んでください。嘘は、事実に混ぜたほうが長持ちしますから。"
+                    "text": "HTTPは、ブラウザとサーバーがWebページのデータをやり取りするためのサービスです。つまり80番ポートでは、寿司屋のWebサイトが待っています。もう一つの open の行も確認して、どちらから調べるか決めましょう。"
                   }
                 ]
               }
@@ -114,18 +191,30 @@
           },
           {
             "type": "question",
-            "id": "ch1_smb_port",
+            "id": "ch1_samba_port_service",
             "label": "調査 02",
-            "prompt": "ファイル共有サービスが応答したポート番号は？",
-            "placeholder": "例: 0000",
-            "input_mode": "numeric",
+            "prompt": "Nmapの結果でもう一つ表示された open の行を記録してください。",
+            "answer_fields": [
+              {
+                "id": "port",
+                "label": "ポート番号",
+                "placeholder": "例: 445",
+                "input_mode": "numeric"
+              },
+              {
+                "id": "service",
+                "label": "サービス名",
+                "placeholder": "例: netbios-ssn",
+                "input_mode": "latin"
+              }
+            ],
             "blocks": [
               {
                 "type": "hints",
                 "id": "hints",
                 "items": [
-                  "Nmapの結果で、HTTP以外のサービス名を確認する。",
-                  "`microsoft-ds` または Samba と表示される行の左端が答えになる。"
+                  "同じNmapの表に、もう一つ `open` の行があります。キミ、意味を考えるのは後で結構です。まずはポート番号とSERVICE名を、表示どおり正確に書いてください。",
+                  "`445/tcp  open  netbios-ssn  Samba smbd 4` なら、ポート番号は `445`、SERVICE名は `netbios-ssn` です。`Samba smbd 4` に目を奪われないでください。そちらはVERSION欄の情報ですよ。"
                 ]
               },
               {
@@ -141,30 +230,118 @@
                 "messages": [
                   {
                     "speaker": "player",
-                    "text": "445番ポート……Sambaのファイル共有も外から見えてます。お寿司屋さんに？"
+                    "text": "もう一つは、445番ポートの netbios-ssn です。後ろには Samba smbd 4 とも出ています。"
                   },
                   {
                     "speaker": "director",
-                    "text": "おやおや。魚だけでなく、ファイルも共有しているようですね。入口は見つかりました。では、鍵を店のWebサイトから探しましょう。"
+                    "text": "そのSambaは、ネットワーク越しにサーバーの共有フォルダやファイルを使えるようにするファイル共有サービスです。おやおや。魚だけでなく、ファイルも共有しているようですね。ただし共有フォルダには鍵がかかっているようです。"
                   }
                 ]
               }
             ]
+          }
+        ]
+      },
+      {
+        "type": "dialogue",
+        "id": "after-service-scan",
+        "visible_when": {
+          "event": "questions_solved",
+          "question_ids": [
+            "ch1_web_port_service",
+            "ch1_samba_port_service"
+          ]
+        },
+        "heading": {
+          "number": "04",
+          "kicker": "NEXT STEP",
+          "title": "Sambaの鍵を探す"
+        },
+        "messages": [
+          {
+            "speaker": "player",
+            "text": "Webサイトとファイル共有が動いていることは分かりました。次はどちらを調べるんです？"
           },
           {
+            "speaker": "director",
+            "text": "知りたいのはSambaの中身ですが、入るにはアカウントIDとパスワードが要ります。一方、Webサイトは誰でも見られる。まずは店のサイトに、ログイン情報の手掛かりが置き忘れられていないか調べましょう。"
+          },
+          {
+            "speaker": "player",
+            "text": "店のサイトから、Sambaのログイン情報を探すんですか？"
+          },
+          {
+            "speaker": "director",
+            "text": "ええ。まず調査端末内のブラウザで http://www.mikuriya-suisan.local/ を開いてみてください。"
+          },
+          {
+            "speaker": "player",
+            "text": "開けました。店の名前は御厨水産、子ども食堂は『みくりや子ども食堂』です。"
+          },
+          {
+            "speaker": "director",
+            "text": "善意に満ちた、よくできた看板ですね。まずは普通のお客さんの目で読んでください。嘘は、事実に混ぜたほうが長持ちしますから。"
+          },
+          {
+            "speaker": "player",
+            "text": "普通のページを眺めるだけで、ログイン情報の手掛かりなんて見つかるんですか？"
+          },
+          {
+            "speaker": "director",
+            "text": "普通でないページも探すんですよ。DIRBは、名前の一覧にある候補をURLの末尾へ一つずつ付け、リンクされていないページを見つける手掛かりを集める道具です。dirb http://www.mikuriya-suisan.local/ /usr/share/dirb/wordlists/common.txt -S -r と入力して、Enterキーを押してください。-S は試行中の大量表示を省き、-r は見つけたディレクトリの中を続けて調べない指定です。今回は店のサイトの一階層目だけを確認しましょう。"
+          },
+          {
+            "speaker": "player",
+            "text": "……いくつか出ました。これ、全部が隠しページなんですか？"
+          },
+          {
+            "speaker": "director",
+            "text": "いいえ。DIRBに分かるのは、そのURLが存在するかどうかだけです。公開メニューから開けるページや、画像などの置き場も結果に混ざります。まず店のトップページにあるメニューと見比べ、そこから辿れない候補を調査端末内のブラウザで開いてください。Sambaの鍵につながる2ページを探しましょう。"
+          }
+        ]
+      },
+      {
+        "type": "questions",
+        "id": "directory-scan",
+        "visible_when": {
+          "event": "questions_solved",
+          "question_ids": [
+            "ch1_web_port_service",
+            "ch1_samba_port_service"
+          ]
+        },
+        "heading": {
+          "number": "05",
+          "kicker": "DIRECTORY SCAN",
+          "title": "見つけたディレクトリを記録する"
+        },
+        "items": [
+          {
             "type": "question",
-            "id": "ch1_samba_user",
+            "id": "ch1_hidden_directories",
             "label": "調査 03",
-            "prompt": "神崎仁美のSambaアカウントIDは？",
-            "placeholder": "アカウントID",
-            "input_mode": "latin",
+            "prompt": "DIRBの結果を寿司屋HPの公開メニューと見比べてください。メニューに載っておらず、Sambaのログイン情報につながる2つのディレクトリは？",
+            "answer_fields": [
+              {
+                "id": "first_directory",
+                "label": "ディレクトリ 1",
+                "placeholder": "例: /example/",
+                "input_mode": "latin"
+              },
+              {
+                "id": "second_directory",
+                "label": "ディレクトリ 2",
+                "placeholder": "例: /sample/",
+                "input_mode": "latin"
+              }
+            ],
             "blocks": [
               {
                 "type": "hints",
                 "id": "hints",
                 "items": [
-                  "公開ナビゲーションにない一般的なディレクトリ名を列挙する。複数のページを組み合わせて考えよう。",
-                  "`gobuster dir -u http://www.mikuriya-suisan.local/ -w /usr/share/dirb/wordlists/common.txt` で `/admin/` と `/backup/` を確認する。"
+                  "行頭の `+` はファイル、`==> DIRECTORY:` はディレクトリを見つけた印です。今回のお目当てはディレクトリですから、まず `==> DIRECTORY:` の行だけに絞りましょう。`assets/` は画像やスタイルなど、店の看板を整えるためのファイル置き場ですよ。",
+                  "公開メニューから開ける `/blog/`、`/menu/`、`/shop/` は候補から外し、残ったURLをブラウザで開いてください。スタッフ向けの管理画面と、公開前データのバックアップに見える2ページがあるはずです。隠し事ほど、案外素直な名前で置かれているものですよ。"
                 ]
               },
               {
@@ -180,30 +357,104 @@
                 "messages": [
                   {
                     "speaker": "player",
-                    "text": "神崎仁美、ローマ字では Hitomi Kanzaki。命名規則ならIDは kanzaki です。"
+                    "text": "見つかったのは /admin/ と /backup/ です。どちらも表のメニューにはありませんでした。"
                   },
                   {
                     "speaker": "director",
-                    "text": "面白いですね。別々なら役に立たない情報が、並べると鍵になる。推測ではなく、店の規則どおりの答えです。"
+                    "text": "隠すつもりで、入口だけは公開したまま。ありがちな置き忘れですね。"
                   }
                 ]
               }
             ]
+          }
+        ]
+      },
+      {
+        "type": "dialogue",
+        "id": "after-hidden-pages",
+        "visible_when": {
+          "event": "questions_solved",
+          "question_ids": [
+            "ch1_hidden_directories"
+          ]
+        },
+        "heading": {
+          "number": "06",
+          "kicker": "CONNECT THE CLUES",
+          "title": "二つのページを照合する"
+        },
+        "messages": [
+          {
+            "speaker": "director",
+            "text": "では、その2ページを調査端末内のブラウザで開き、書かれている内容を比べてみてください。"
           },
           {
+            "speaker": "player",
+            "text": "両方とも開きました。でも、SambaのIDやパスワードがそのまま書かれているわけじゃないですね。"
+          },
+          {
+            "speaker": "director",
+            "text": "ええ。では、書かれている情報を分けて見ましょう。/admin/ のスタッフ向け掲示には、何がありましたか？"
+          },
+          {
+            "speaker": "player",
+            "text": "社内システムのアカウント規則です。"
+          },
+          {
+            "speaker": "director",
+            "text": "規則だけでは鍵になりません。公開ページで見かけた人物を思い出しながら、IDとパスワードに必要な情報を整理してみてください。"
+          },
+          {
+            "speaker": "player",
+            "text": "ああ！でも、パスワード変えちゃってるんじゃないですか？"
+          },
+          {
+            "speaker": "director",
+            "text": "もちろん、その可能性はあります。ですが、試してみる価値はあると思いますよ。"
+          }
+        ]
+      },
+      {
+        "type": "questions",
+        "id": "samba-credentials",
+        "visible_when": {
+          "event": "questions_solved",
+          "question_ids": [
+            "ch1_hidden_directories"
+          ]
+        },
+        "heading": {
+          "number": "07",
+          "kicker": "CREDENTIALS",
+          "title": "Sambaの鍵を組み立てる"
+        },
+        "items": [
+          {
             "type": "question",
-            "id": "ch1_samba_password",
+            "id": "ch1_samba_credentials",
             "label": "調査 04",
-            "prompt": "神崎仁美の初期パスワードは？",
-            "placeholder": "大文字・小文字を区別して入力",
-            "input_mode": "latin",
+            "prompt": "侵入できそうなアカウントのSamba認証情報を記録してください。",
+            "answer_fields": [
+              {
+                "id": "account_id",
+                "label": "アカウントID",
+                "placeholder": "アカウントID",
+                "input_mode": "latin"
+              },
+              {
+                "id": "password",
+                "label": "初期パスワード",
+                "placeholder": "大文字・小文字を区別して入力",
+                "input_mode": "latin"
+              }
+            ],
             "blocks": [
               {
                 "type": "hints",
                 "id": "hints",
                 "items": [
-                  "初期パスワードの規則と、神崎が入社した年をそれぞれ別のページで確認する。",
-                  "姓は `Kanzaki`、入社年は `2019`。規則どおり、間を空けずにつなげる。"
+                  "HPで顔が見えている従業員は2人でしたね。そのうち、入社年まで分かる人物は誰でしょう。キミなら、もう片方のページで見かけているはずです。",
+                  "姓は `Kanzaki`、入社年は `2019`。あとは店の規則に従うだけです。IDは姓をすべて小文字にし、初期パスワードは姓の先頭だけを大文字にして入社年を続けてください。"
                 ]
               },
               {
@@ -219,7 +470,7 @@
                 "messages": [
                   {
                     "speaker": "player",
-                    "text": "2019年入社だから、初期パスワードは Kanzaki2019。……本当に変えてないんでしょうか。"
+                    "text": "IDは kanzaki、初期パスワードは Kanzaki2019。……本当に変えてないんでしょうか。"
                   },
                   {
                     "speaker": "director",

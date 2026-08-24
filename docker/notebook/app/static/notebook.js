@@ -106,6 +106,41 @@
         <p>${escapeHtml(entry.text)}</p>
       </div>
     `;
+    if (entry.link) {
+      const link = document.createElement("a");
+      link.className = "dialogue-link";
+      link.href = entry.link.href;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = entry.link.label;
+      row.querySelector(".dialogue-body p").append(link);
+    }
+    if (entry.image) {
+      const figure = document.createElement("figure");
+      figure.className = "dialogue-image";
+
+      const imageLink = document.createElement("a");
+      imageLink.className = "dialogue-image-link";
+      imageLink.href = entry.image.src;
+      imageLink.target = "_blank";
+      imageLink.rel = "noopener noreferrer";
+      imageLink.setAttribute("aria-label", `${entry.image.alt}（原寸で開く）`);
+
+      const image = document.createElement("img");
+      image.src = entry.image.src;
+      image.alt = entry.image.alt;
+      image.loading = "lazy";
+      image.decoding = "async";
+      imageLink.append(image);
+      figure.append(imageLink);
+
+      if (entry.image.caption) {
+        const caption = document.createElement("figcaption");
+        caption.textContent = entry.image.caption;
+        figure.append(caption);
+      }
+      row.querySelector(".dialogue-body").append(figure);
+    }
     return row;
   }
 
@@ -252,21 +287,21 @@
     return hints;
   }
 
-  function renderQuestionBlock(question, context, index) {
-    const solved = state.progress.solved_question_ids.includes(question.id);
-    const savedAnswer = state.progress.answers[question.id]?.answer || "";
-    const form = document.createElement("form");
-    form.className = `question-card${solved ? " is-solved" : ""}`;
-    form.dataset.questionId = question.id;
-    form.style.setProperty("--question-index", index);
-    form.innerHTML = `
-      <div class="question-topline">
-        <span>${escapeHtml(question.label)}</span>
-        <span class="question-result">${solved ? "記録済み" : "未解決"}</span>
-      </div>
-      <label for="answer-${question.id}">${escapeHtml(question.prompt)}</label>
-      <div class="answer-row">
-        <span class="pencil-mark" aria-hidden="true">✎</span>
+  function savedAnswerParts(savedAnswer, fieldCount) {
+    if (!savedAnswer) return Array(fieldCount).fill("");
+    const tabParts = savedAnswer.split("\t");
+    if (tabParts.length === fieldCount) return tabParts;
+
+    const tokens = savedAnswer.trim().split(/\s+/);
+    if (fieldCount === 2 && tokens.length >= 2) {
+      return [tokens[0].replace(/\/tcp$/i, ""), tokens.at(-1)];
+    }
+    return [...tokens.slice(0, fieldCount - 1), tokens.slice(fieldCount - 1).join(" ")];
+  }
+
+  function createAnswerInputs(question, savedAnswer, solved) {
+    if (!question.answer_fields) {
+      return `
         <input
           id="answer-${question.id}"
           name="answer"
@@ -279,6 +314,51 @@
           ${question.input_mode === "numeric" ? 'inputmode="numeric"' : ""}
           ${solved ? "disabled" : ""}
         >
+      `;
+    }
+
+    const values = savedAnswerParts(savedAnswer, question.answer_fields.length);
+    const fields = question.answer_fields.map((field, index) => `
+      <label class="answer-field" for="answer-${question.id}-${field.id}">
+        <span class="answer-field-label">${escapeHtml(field.label)}</span>
+        <input
+          id="answer-${question.id}-${field.id}"
+          name="answer_${field.id}"
+          data-answer-part
+          type="text"
+          value="${escapeAttribute(values[index] || "")}"
+          placeholder="${escapeAttribute(field.placeholder)}"
+          autocomplete="off"
+          autocapitalize="off"
+          spellcheck="false"
+          ${field.input_mode === "numeric" ? 'inputmode="numeric"' : ""}
+          ${solved ? "disabled" : ""}
+        >
+      </label>
+    `).join("");
+    return `<div class="answer-fields" aria-label="回答欄">${fields}</div>`;
+  }
+
+  function renderQuestionBlock(question, context, index) {
+    const solved = state.progress.solved_question_ids.includes(question.id);
+    const savedAnswer = state.progress.answers[question.id]?.answer || "";
+    const form = document.createElement("form");
+    form.className = `question-card${solved ? " is-solved" : ""}`;
+    form.dataset.questionId = question.id;
+    form.style.setProperty("--question-index", index);
+    const promptId = `question-prompt-${question.id}`;
+    const prompt = question.answer_fields
+      ? `<p class="question-prompt" id="${promptId}">${escapeHtml(question.prompt)}</p>`
+      : `<label for="answer-${question.id}">${escapeHtml(question.prompt)}</label>`;
+    form.innerHTML = `
+      <div class="question-topline">
+        <span>${escapeHtml(question.label)}</span>
+        <span class="question-result">${solved ? "記録済み" : "未解決"}</span>
+      </div>
+      ${prompt}
+      <div class="answer-row">
+        <span class="pencil-mark" aria-hidden="true">✎</span>
+        ${createAnswerInputs(question, savedAnswer, solved)}
         <button class="ink-button" type="submit" ${solved ? "disabled" : ""}>
           ${solved ? "記録済み" : "照合する"}
         </button>
@@ -373,9 +453,23 @@
   async function submitAnswer(event) {
     event.preventDefault();
     const form = event.currentTarget;
-    const input = form.elements.answer;
+    const answerParts = [...form.querySelectorAll("[data-answer-part]")];
+    const answer = answerParts.length
+      ? answerParts.map((input) => input.value.trim()).join("\t")
+      : form.elements.answer.value;
     const button = form.querySelector("button[type='submit']");
     const feedback = form.querySelector(".answer-feedback");
+
+    if (answerParts.some((input) => !input.value.trim())) {
+      const missingLabels = answerParts
+        .filter((input) => !input.value.trim())
+        .map((input) => input.closest(".answer-field")?.querySelector(".answer-field-label")?.textContent)
+        .filter(Boolean);
+      feedback.textContent = `${missingLabels.join("と")}を入力してください。`;
+      feedback.classList.add("is-error");
+      return;
+    }
+
     button.disabled = true;
     button.textContent = "照合中…";
     feedback.textContent = "";
@@ -384,7 +478,7 @@
       const response = await fetch(`/api/answers/${form.dataset.questionId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answer: input.value }),
+        body: JSON.stringify({ answer }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.detail || "照合できませんでした。");

@@ -15,31 +15,33 @@
         "ササキエマ"
       ]
     },
-    "ch1_web_port": {
+    "ch1_web_port_service": {
       "accepted": [
-        "80",
-        "80/tcp",
-        "tcp/80"
+        "80 http",
+        "80/tcp http",
+        "80/tcp open http"
       ]
     },
-    "ch1_smb_port": {
+    "ch1_samba_port_service": {
       "accepted": [
-        "445",
-        "445/tcp",
-        "tcp/445"
+        "445 netbios-ssn",
+        "445/tcp netbios-ssn",
+        "445/tcp open netbios-ssn"
       ]
     },
-    "ch1_samba_user": {
-      "accepted": [
-        "kanzaki"
+    "ch1_hidden_directories": {
+      "validation": "contains_all",
+      "required_terms": [
+        "admin",
+        "backup"
       ]
     },
-    "ch1_samba_password": {
+    "ch1_samba_credentials": {
       "accepted": [
-        "Kanzaki2019"
+        "kanzaki\tKanzaki2019"
       ],
       "validation": "exact",
-      "incorrect_message": "文字の大文字・小文字と、入社年をもう一度確認しよう。"
+      "incorrect_message": "アカウントIDの小文字表記と、初期パスワードの大文字・小文字・入社年をもう一度確認しよう。"
     },
     "ch2_selection_conditions": {
       "validation": "contains_all",

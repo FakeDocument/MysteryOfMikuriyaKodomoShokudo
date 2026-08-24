@@ -8,18 +8,24 @@ import unicodedata
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 
 DATA_DIR = Path(__file__).parent / "data"
 CHAPTERS_DIR = DATA_DIR / "chapters"
 CHAPTERS_MANIFEST_PATH = CHAPTERS_DIR / "manifest.json"
 ANSWERS_PATH = DATA_DIR / "answers.json"
+STATIC_IMAGES_DIR = Path(__file__).parent / "static" / "images"
 ANSWER_ONLY_KEYS = {"accepted", "validation", "required_terms", "incorrect_message"}
 ALLOWED_VALIDATIONS = {"one_of", "exact", "contains_all"}
 ALLOWED_SPEAKERS = {"director", "player"}
-ALLOWED_VISIBILITY_EVENTS = {"note_saved", "question_solved"}
+ALLOWED_VISIBILITY_EVENTS = {"note_saved", "question_solved", "questions_solved"}
 ALLOWED_TOP_LEVEL_BLOCKS = {"dialogue", "document", "evidence_note", "questions"}
 ALLOWED_QUESTION_BLOCKS = {"hints", "dialogue"}
+DIALOGUE_IMAGE_PATH = re.compile(
+    r"^/static/images/[a-z0-9][a-z0-9._-]*\.(?:png|jpe?g|webp)$"
+)
+ANSWER_FIELD_ID = re.compile(r"^[a-z][a-z0-9_-]*$")
 
 
 class ContentConfigurationError(ValueError):
@@ -69,22 +75,90 @@ def _validate_dialogue(messages: Any, location: str) -> None:
                 f"{item_location}.speaker は director または player にしてください。"
             )
         _require_text(item.get("text"), f"{item_location}.text")
+        if "link" in item:
+            link = item["link"]
+            link_location = f"{item_location}.link"
+            if not isinstance(link, dict) or set(link) != {"label", "href"}:
+                raise ContentConfigurationError(
+                    f"{link_location} は label と href だけを持つオブジェクトにしてください。"
+                )
+            _require_text(link.get("label"), f"{link_location}.label")
+            _require_text(link.get("href"), f"{link_location}.href")
+            parsed_href = urlsplit(link["href"])
+            if parsed_href.scheme not in {"http", "https"} or not parsed_href.netloc:
+                raise ContentConfigurationError(
+                    f"{link_location}.href は http または https の完全なURLにしてください。"
+                )
+        if "image" in item:
+            image = item["image"]
+            image_location = f"{item_location}.image"
+            required_keys = {"src", "alt"}
+            allowed_keys = required_keys | {"caption"}
+            if (
+                not isinstance(image, dict)
+                or not required_keys.issubset(image)
+                or not set(image).issubset(allowed_keys)
+            ):
+                raise ContentConfigurationError(
+                    f"{image_location} は src・alt と任意の caption だけを持つオブジェクトにしてください。"
+                )
+            for key in required_keys:
+                _require_text(image.get(key), f"{image_location}.{key}")
+            if "caption" in image:
+                _require_text(image["caption"], f"{image_location}.caption")
+            if not DIALOGUE_IMAGE_PATH.fullmatch(image["src"]):
+                raise ContentConfigurationError(
+                    f"{image_location}.src は /static/images/ 配下の画像パスにしてください。"
+                )
+            image_path = STATIC_IMAGES_DIR / Path(image["src"]).name
+            if not image_path.is_file():
+                raise ContentConfigurationError(
+                    f"{image_location}.src の画像が見つかりません: {image['src']}"
+                )
 
 
-def _validate_visibility(value: Any, location: str, allowed_event: str) -> None:
+def _validate_visibility(
+    value: Any,
+    location: str,
+    allowed_events: str | set[str],
+) -> None:
     if value is None:
         return
-    if not isinstance(value, dict) or set(value) != {"event"}:
+    if not isinstance(value, dict):
         raise ContentConfigurationError(
-            f"{location} は event だけを持つオブジェクトにしてください。"
+            f"{location} はオブジェクトにしてください。"
         )
     event = value.get("event")
     if event not in ALLOWED_VISIBILITY_EVENTS:
         raise ContentConfigurationError(
             f"{location}.event は {', '.join(sorted(ALLOWED_VISIBILITY_EVENTS))} のいずれかにしてください。"
         )
-    if event != allowed_event:
+    allowed = {allowed_events} if isinstance(allowed_events, str) else allowed_events
+    if event not in allowed:
         raise ContentConfigurationError(f"{location}.event に {event} は使用できません。")
+
+    if event == "questions_solved":
+        if set(value) != {"event", "question_ids"}:
+            raise ContentConfigurationError(
+                f"{location} は event と question_ids だけを持つオブジェクトにしてください。"
+            )
+        required_ids = value.get("question_ids")
+        if not isinstance(required_ids, list) or not required_ids:
+            raise ContentConfigurationError(
+                f"{location}.question_ids は1件以上の配列にしてください。"
+            )
+        for index, question_id in enumerate(required_ids):
+            _require_text(question_id, f"{location}.question_ids[{index}]")
+        if len(set(required_ids)) != len(required_ids):
+            raise ContentConfigurationError(
+                f"{location}.question_ids に重複があります。"
+            )
+        return
+
+    if set(value) != {"event"}:
+        raise ContentConfigurationError(
+            f"{location} は event だけを持つオブジェクトにしてください。"
+        )
 
 
 def _validate_answer(question_id: str, answer: Any) -> None:
@@ -157,10 +231,48 @@ def _validate_question_blocks(blocks: Any, location: str) -> None:
             _validate_visibility(
                 block.get("visible_when"),
                 f"{block_location}.visible_when",
-                "question_solved",
+                {"question_solved", "questions_solved"},
             )
             _validate_heading(block.get("heading"), f"{block_location}.heading")
             _validate_dialogue(block.get("messages"), f"{block_location}.messages")
+
+
+def _validate_question_inputs(question: dict[str, Any], question_id: str) -> None:
+    fields = question.get("answer_fields")
+    if fields is None:
+        for key in ("placeholder", "input_mode"):
+            _require_text(question.get(key), f"{question_id}.{key}")
+        return
+
+    if "placeholder" in question or "input_mode" in question:
+        raise ContentConfigurationError(
+            f"{question_id} は answer_fields と placeholder・input_mode を併用できません。"
+        )
+    if not isinstance(fields, list) or len(fields) < 2:
+        raise ContentConfigurationError(
+            f"{question_id}.answer_fields は2件以上の配列にしてください。"
+        )
+
+    field_ids: set[str] = set()
+    required_keys = {"id", "label", "placeholder", "input_mode"}
+    for index, field in enumerate(fields):
+        location = f"{question_id}.answer_fields[{index}]"
+        if not isinstance(field, dict) or set(field) != required_keys:
+            raise ContentConfigurationError(
+                f"{location} は id・label・placeholder・input_mode だけを持つオブジェクトにしてください。"
+            )
+        for key in required_keys:
+            _require_text(field.get(key), f"{location}.{key}")
+        field_id = field["id"]
+        if not ANSWER_FIELD_ID.fullmatch(field_id):
+            raise ContentConfigurationError(
+                f"{location}.id は英小文字から始まる英数字・_・-にしてください。"
+            )
+        if field_id in field_ids:
+            raise ContentConfigurationError(
+                f"{question_id}.answer_fields のidが重複しています: {field_id}"
+            )
+        field_ids.add(field_id)
 
 
 def _validate_question(
@@ -188,8 +300,9 @@ def _validate_question(
         raise ContentConfigurationError(f"設問IDが重複しています: {question_id}")
     question_ids.add(question_id)
 
-    for key in ("label", "prompt", "placeholder", "input_mode"):
+    for key in ("label", "prompt"):
         _require_text(question.get(key), f"{question_id}.{key}")
+    _validate_question_inputs(question, question_id)
     _validate_question_blocks(question.get("blocks"), f"{question_id}.blocks")
 
     answer = answers.get(question_id)
@@ -235,7 +348,7 @@ def _validate_chapter_blocks(
             _validate_visibility(
                 block.get("visible_when"),
                 f"{location}.visible_when",
-                "note_saved",
+                {"note_saved", "questions_solved"},
             )
             _validate_dialogue(block.get("messages"), f"{location}.messages")
         elif block_type == "document":
@@ -253,6 +366,11 @@ def _validate_chapter_blocks(
             for key in ("label", "placeholder", "action_label"):
                 _require_text(block.get(key), f"{location}.{key}")
         else:
+            _validate_visibility(
+                block.get("visible_when"),
+                f"{location}.visible_when",
+                "questions_solved",
+            )
             items = block.get("items")
             if not isinstance(items, list) or not items:
                 raise ContentConfigurationError(f"{location}.items は空でない配列にしてください。")
@@ -345,6 +463,38 @@ def load_content(
             answers,
         )
 
+    visibility_owners: list[tuple[str, str, dict[str, Any]]] = []
+    for chapter in chapters:
+        for block in chapter.get("blocks", []):
+            visibility_owners.append((chapter["id"], block["id"], block))
+    for question in questions_by_id.values():
+        for block in question.get("blocks", []):
+            visibility_owners.append(
+                (question["chapter_id"], question["id"], block)
+            )
+
+    for chapter_id, owner_id, block in visibility_owners:
+        visibility = block.get("visible_when")
+        if not visibility or visibility.get("event") != "questions_solved":
+            continue
+        referenced_ids = set(visibility["question_ids"])
+        unknown_ids = referenced_ids.difference(question_ids)
+        if unknown_ids:
+            raise ContentConfigurationError(
+                f"{owner_id} の表示条件に存在しない設問IDがあります: "
+                + ", ".join(sorted(unknown_ids))
+            )
+        other_chapters = {
+            referenced_id
+            for referenced_id in referenced_ids
+            if questions_by_id[referenced_id]["chapter_id"] != chapter_id
+        }
+        if other_chapters:
+            raise ContentConfigurationError(
+                f"{owner_id} の表示条件には同じ章の設問IDだけを指定してください: "
+                + ", ".join(sorted(other_chapters))
+            )
+
     orphan_answers = set(answers).difference(question_ids)
     if orphan_answers:
         raise ContentConfigurationError(
@@ -387,8 +537,13 @@ def _public_question(question: dict[str, Any], solved_ids: set[str]) -> None:
     public_blocks = []
     for block in question.get("blocks", []):
         visibility = block.get("visible_when")
-        if visibility and visibility.get("event") == "question_solved":
-            if question["id"] not in solved_ids:
+        if visibility:
+            event = visibility.get("event")
+            if event == "question_solved" and question["id"] not in solved_ids:
+                continue
+            if event == "questions_solved" and not set(
+                visibility["question_ids"]
+            ).issubset(solved_ids):
                 continue
         block.pop("visible_when", None)
         public_blocks.append(block)
@@ -413,8 +568,13 @@ def public_chapters(progress: dict[str, Any] | None = None) -> list[dict[str, An
         public_blocks = []
         for block in chapter["blocks"]:
             visibility = block.get("visible_when")
-            if visibility and visibility.get("event") == "note_saved":
-                if chapter["id"] not in acknowledged_notes:
+            if visibility:
+                event = visibility.get("event")
+                if event == "note_saved" and chapter["id"] not in acknowledged_notes:
+                    continue
+                if event == "questions_solved" and not set(
+                    visibility["question_ids"]
+                ).issubset(solved_ids):
                     continue
             block.pop("visible_when", None)
             if block["type"] == "questions":

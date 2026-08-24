@@ -23,10 +23,12 @@ def block_of_type(chapter, block_type):
 
 
 def questions_in(chapter):
-    for block in chapter["blocks"]:
-        if block["type"] == "questions":
-            return block["items"]
-    return []
+    return [
+        question
+        for block in chapter["blocks"]
+        if block["type"] == "questions"
+        for question in block["items"]
+    ]
 
 
 class AnswerValidationTest(unittest.TestCase):
@@ -36,14 +38,32 @@ class AnswerValidationTest(unittest.TestCase):
         self.assertTrue(validate_answer(question, "エンドウミサキ"))
 
     def test_password_is_case_sensitive(self):
-        question = QUESTIONS_BY_ID["ch1_samba_password"]
-        self.assertTrue(validate_answer(question, "Kanzaki2019"))
-        self.assertFalse(validate_answer(question, "kanzaki2019"))
+        question = QUESTIONS_BY_ID["ch1_samba_credentials"]
+        self.assertTrue(validate_answer(question, "kanzaki\tKanzaki2019"))
+        self.assertFalse(validate_answer(question, "kanzaki\tkanzaki2019"))
 
     def test_reasoning_answer_requires_both_terms(self):
         question = QUESTIONS_BY_ID["ch2_selection_conditions"]
         self.assertTrue(validate_answer(question, "孤立していて、肉付きが良いこと"))
         self.assertFalse(validate_answer(question, "孤立していること"))
+
+    def test_port_scan_answers_require_port_and_service_name(self):
+        web = QUESTIONS_BY_ID["ch1_web_port_service"]
+        samba = QUESTIONS_BY_ID["ch1_samba_port_service"]
+        self.assertTrue(validate_answer(web, "80 http"))
+        self.assertTrue(validate_answer(web, "80\thttp"))
+        self.assertTrue(validate_answer(web, "80/tcp open http"))
+        self.assertFalse(validate_answer(web, "80"))
+        self.assertTrue(validate_answer(samba, "445 netbios-ssn"))
+        self.assertTrue(validate_answer(samba, "445\tnetbios-ssn"))
+        self.assertTrue(validate_answer(samba, "445/tcp open netbios-ssn"))
+        self.assertFalse(validate_answer(samba, "445"))
+
+    def test_hidden_directory_answer_requires_both_results(self):
+        question = QUESTIONS_BY_ID["ch1_hidden_directories"]
+        self.assertTrue(validate_answer(question, "/admin/\t/backup/"))
+        self.assertTrue(validate_answer(question, "/backup/\t/admin/"))
+        self.assertFalse(validate_answer(question, "/admin/"))
 
     def test_public_data_does_not_expose_answers_or_unsolved_dialogue(self):
         chapters = public_chapters()
@@ -116,6 +136,333 @@ class ContentFileTest(unittest.TestCase):
         self.assertIn("http://www.mikuriya-suisan.local/", dialogue)
         self.assertIn("172.30.0.10", dialogue)
 
+    def test_chapter_one_dialogue_links_to_investigation_terminal(self):
+        opening = CHAPTERS[1]["blocks"][0]
+        terminal_message = next(
+            message for message in opening["messages"] if "link" in message
+        )
+        self.assertEqual(terminal_message["link"]["label"], "調査端末を開く")
+        self.assertEqual(
+            terminal_message["link"]["href"],
+            "http://127.0.0.1:6901/vnc.html?autoconnect=true",
+        )
+
+        app_dir = CHAPTERS_MANIFEST_PATH.parent.parent.parent
+        script = (app_dir / "static" / "notebook.js").read_text(encoding="utf-8")
+        self.assertIn('link.rel = "noopener noreferrer"', script)
+
+    def test_chapter_one_explains_first_tools_for_beginners(self):
+        chapter = CHAPTERS[1]
+        opening_dialogue = "".join(
+            message["text"] for message in chapter["blocks"][0]["messages"]
+        )
+        for expected in (
+            "接続用パスワードは 99",
+            "IPアドレス",
+            "PORT",
+            "STATE",
+            "SERVICE",
+        ):
+            self.assertIn(expected, opening_dialogue)
+
+        questions = questions_in(chapter)
+        for question in questions[:2]:
+            self.assertEqual(
+                [field["label"] for field in question["answer_fields"]],
+                ["ポート番号", "サービス名"],
+            )
+            self.assertNotIn("placeholder", question)
+            self.assertNotIn("input_mode", question)
+
+        web_hints = "".join(questions[0]["blocks"][0]["items"])
+        samba_hints = "".join(questions[1]["blocks"][0]["items"])
+        web_follow_up = "".join(
+            message["text"] for message in questions[0]["blocks"][1]["messages"]
+        )
+        samba_follow_up = "".join(
+            message["text"] for message in questions[1]["blocks"][1]["messages"]
+        )
+        self.assertIn("80/tcp  open  http", web_hints)
+        self.assertIn("HTTPは", web_follow_up)
+        self.assertIn("Webページ", web_follow_up)
+        self.assertIn("445/tcp  open  netbios-ssn", samba_hints)
+        self.assertIn("Samba smbd 4", samba_hints)
+        self.assertIn("ファイル共有サービス", samba_follow_up)
+        self.assertNotIn("microsoft-ds", opening_dialogue + web_hints + samba_hints)
+
+        directory_question = questions[2]
+        self.assertEqual(
+            [field["label"] for field in directory_question["answer_fields"]],
+            ["ディレクトリ 1", "ディレクトリ 2"],
+        )
+        dirb_hints = "".join(directory_question["blocks"][0]["items"])
+        self.assertIn("==> DIRECTORY:", dirb_hints)
+        self.assertIn("`+` はファイル", dirb_hints)
+        self.assertIn("`assets/`", dirb_hints)
+        self.assertIn("公開メニュー", directory_question["prompt"] + dirb_hints)
+        self.assertIn("スタッフ向けの管理画面", dirb_hints)
+
+        directory_follow_up = "".join(
+            message["text"] for message in directory_question["blocks"][1]["messages"]
+        )
+        self.assertIn("/admin/", directory_follow_up)
+        self.assertIn("/backup/", directory_follow_up)
+
+        terminal_message = next(
+            message for message in chapter["blocks"][0]["messages"] if "image" in message
+        )
+        self.assertEqual(
+            terminal_message["image"]["src"],
+            "/static/images/tutorial-terminal.png",
+        )
+        app_dir = CHAPTERS_MANIFEST_PATH.parent.parent.parent
+        image_path = app_dir / terminal_message["image"]["src"].removeprefix("/")
+        self.assertTrue(image_path.is_file())
+
+        script = (app_dir / "static" / "notebook.js").read_text(encoding="utf-8")
+        self.assertIn('image.loading = "lazy"', script)
+        self.assertIn("data-answer-part", script)
+        self.assertIn('.join("\\t")', script)
+
+    def test_chapter_one_sections_unlock_in_order_and_bridge_is_standalone(self):
+        def chapter_one_with(solved_question_ids):
+            progress = {
+                "solved_question_ids": solved_question_ids,
+                "acknowledged_note_chapter_ids": [],
+                "unlocked_chapter_ids": ["prologue", "chapter-1"],
+            }
+            return public_chapters(progress)[1]
+
+        web_only = chapter_one_with(["ch1_web_port_service"])
+        samba_only = chapter_one_with(["ch1_samba_port_service"])
+        both_solved = chapter_one_with(
+            ["ch1_web_port_service", "ch1_samba_port_service"]
+        )
+        directory_solved = chapter_one_with(
+            [
+                "ch1_web_port_service",
+                "ch1_samba_port_service",
+                "ch1_hidden_directories",
+            ]
+        )
+
+        self.assertEqual(
+            [question["id"] for question in questions_in(web_only)],
+            ["ch1_web_port_service", "ch1_samba_port_service"],
+        )
+        self.assertEqual(
+            [question["id"] for question in questions_in(samba_only)],
+            ["ch1_web_port_service", "ch1_samba_port_service"],
+        )
+        self.assertNotIn("after-service-scan", [block["id"] for block in web_only["blocks"]])
+        self.assertNotIn("after-service-scan", [block["id"] for block in samba_only["blocks"]])
+
+        self.assertEqual(
+            [question["id"] for question in questions_in(both_solved)],
+            [
+                "ch1_web_port_service",
+                "ch1_samba_port_service",
+                "ch1_hidden_directories",
+            ],
+        )
+        both_solved_block_ids = [block["id"] for block in both_solved["blocks"]]
+        self.assertIn("after-service-scan", both_solved_block_ids)
+        self.assertIn("directory-scan", both_solved_block_ids)
+        self.assertNotIn("after-hidden-pages", both_solved_block_ids)
+        self.assertNotIn("samba-credentials", both_solved_block_ids)
+
+        self.assertEqual(
+            [question["id"] for question in questions_in(directory_solved)],
+            [
+                "ch1_web_port_service",
+                "ch1_samba_port_service",
+                "ch1_hidden_directories",
+                "ch1_samba_credentials",
+            ],
+        )
+        self.assertIn(
+            "after-hidden-pages",
+            [block["id"] for block in directory_solved["blocks"]],
+        )
+        self.assertIn(
+            "samba-credentials",
+            [block["id"] for block in directory_solved["blocks"]],
+        )
+
+        transition = next(
+            block
+            for block in both_solved["blocks"]
+            if block["id"] == "after-service-scan"
+        )
+        self.assertEqual(transition["type"], "dialogue")
+        self.assertEqual(transition["heading"]["number"], "04")
+        self.assertEqual(
+            next(
+                block
+                for block in both_solved["blocks"]
+                if block["id"] == "directory-scan"
+            )["heading"]["number"],
+            "05",
+        )
+        self.assertEqual(
+            next(
+                block
+                for block in directory_solved["blocks"]
+                if block["id"] == "after-hidden-pages"
+            )["heading"]["number"],
+            "06",
+        )
+        self.assertEqual(
+            next(
+                block
+                for block in directory_solved["blocks"]
+                if block["id"] == "samba-credentials"
+            )["heading"]["number"],
+            "07",
+        )
+        samba_question = next(
+            question
+            for question in questions_in(both_solved)
+            if question["id"] == "ch1_samba_port_service"
+        )
+        self.assertNotIn(
+            "after-service-scan",
+            [block["id"] for block in samba_question["blocks"]],
+        )
+        dialogue = "".join(message["text"] for message in transition["messages"])
+        self.assertIn("アカウントIDとパスワード", dialogue)
+        self.assertIn("http://www.mikuriya-suisan.local/", dialogue)
+        self.assertIn("DIRB", dialogue)
+        self.assertIn("-S -r", dialogue)
+        self.assertIn("公開メニューから開けるページ", dialogue)
+        hidden_transition = next(
+            block
+            for block in directory_solved["blocks"]
+            if block["id"] == "after-hidden-pages"
+        )
+        hidden_dialogue = "".join(
+            message["text"] for message in hidden_transition["messages"]
+        )
+        self.assertIn("ブラウザで開き", hidden_dialogue)
+        self.assertIn("公開ページ", hidden_dialogue)
+        self.assertNotIn("Kanzaki", hidden_dialogue)
+        self.assertNotIn("2019", hidden_dialogue)
+        credential_questions = {
+            question["id"]: question for question in questions_in(directory_solved)
+        }
+        credentials_question = credential_questions["ch1_samba_credentials"]
+        credential_hints = "".join(credentials_question["blocks"][0]["items"])
+        self.assertEqual(
+            credentials_question["prompt"],
+            "侵入できそうなアカウントのSamba認証情報を記録してください。",
+        )
+        self.assertEqual(
+            [field["label"] for field in credentials_question["answer_fields"]],
+            ["アカウントID", "初期パスワード"],
+        )
+        self.assertIn("入社年", credential_hints)
+        directory_question = next(
+            question
+            for question in questions_in(directory_solved)
+            if question["id"] == "ch1_hidden_directories"
+        )
+        follow_up = next(
+            block for block in directory_question["blocks"] if block["type"] == "dialogue"
+        )
+        follow_up_dialogue = "".join(
+            message["text"] for message in follow_up["messages"]
+        )
+        self.assertNotIn("ブラウザで開き", follow_up_dialogue)
+        self.assertNotIn(
+            "Kanzaki",
+            follow_up_dialogue,
+        )
+        self.assertNotIn("Testing", dialogue)
+        self.assertNotIn("==> DIRECTORY:", dialogue)
+
+    def test_multi_question_visibility_rejects_unknown_question(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_chapters = Path(temp_dir) / "chapters"
+            shutil.copytree(CHAPTERS_MANIFEST_PATH.parent, temp_chapters)
+            chapter_path = temp_chapters / "chapter-1.json"
+            chapter_data = json.loads(chapter_path.read_text(encoding="utf-8"))
+            transition = next(
+                block
+                for block in chapter_data["chapter"]["blocks"]
+                if block["id"] == "after-service-scan"
+            )
+            transition["visible_when"]["question_ids"][1] = "missing_question"
+            chapter_path.write_text(
+                json.dumps(chapter_data, ensure_ascii=False), encoding="utf-8"
+            )
+
+            with self.assertRaisesRegex(
+                ContentConfigurationError,
+                "存在しない設問ID",
+            ):
+                load_content(temp_chapters / "manifest.json", ANSWERS_PATH)
+
+    def test_multi_field_question_rejects_single_field_configuration(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_chapters = Path(temp_dir) / "chapters"
+            shutil.copytree(CHAPTERS_MANIFEST_PATH.parent, temp_chapters)
+            chapter_path = temp_chapters / "chapter-1.json"
+            chapter_data = json.loads(chapter_path.read_text(encoding="utf-8"))
+            chapter_data["chapter"]["blocks"][3]["items"][0]["answer_fields"] = [
+                {
+                    "id": "port",
+                    "label": "ポート番号",
+                    "placeholder": "例: 80",
+                    "input_mode": "numeric",
+                }
+            ]
+            chapter_path.write_text(
+                json.dumps(chapter_data, ensure_ascii=False), encoding="utf-8"
+            )
+
+            with self.assertRaisesRegex(ContentConfigurationError, "2件以上"):
+                load_content(temp_chapters / "manifest.json", ANSWERS_PATH)
+
+    def test_dialogue_link_rejects_non_http_url(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_chapters = Path(temp_dir) / "chapters"
+            shutil.copytree(CHAPTERS_MANIFEST_PATH.parent, temp_chapters)
+            chapter_path = temp_chapters / "chapter-1.json"
+            chapter_data = json.loads(chapter_path.read_text(encoding="utf-8"))
+            chapter_data["chapter"]["blocks"][0]["messages"][0]["link"] = {
+                "label": "危険なリンク",
+                "href": "javascript:alert(1)",
+            }
+            chapter_path.write_text(
+                json.dumps(chapter_data, ensure_ascii=False), encoding="utf-8"
+            )
+
+            with self.assertRaisesRegex(
+                ContentConfigurationError,
+                "http または https の完全なURL",
+            ):
+                load_content(temp_chapters / "manifest.json", ANSWERS_PATH)
+
+    def test_dialogue_image_rejects_external_source(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_chapters = Path(temp_dir) / "chapters"
+            shutil.copytree(CHAPTERS_MANIFEST_PATH.parent, temp_chapters)
+            chapter_path = temp_chapters / "chapter-1.json"
+            chapter_data = json.loads(chapter_path.read_text(encoding="utf-8"))
+            chapter_data["chapter"]["blocks"][0]["messages"][0]["image"] = {
+                "src": "https://example.com/tutorial.png",
+                "alt": "外部画像",
+            }
+            chapter_path.write_text(
+                json.dumps(chapter_data, ensure_ascii=False), encoding="utf-8"
+            )
+
+            with self.assertRaisesRegex(
+                ContentConfigurationError,
+                "/static/images/ 配下",
+            ):
+                load_content(temp_chapters / "manifest.json", ANSWERS_PATH)
+
     def test_missing_answer_configuration_has_clear_error(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             answers_data = json.loads(ANSWERS_PATH.read_text(encoding="utf-8"))
@@ -165,6 +512,15 @@ class ProgressStoreTest(unittest.TestCase):
         progress = get_progress(CHAPTERS)
         self.assertEqual(progress["notes"]["prologue"]["content"], "依頼書を確認した。")
         self.assertIn("prologue", progress["acknowledged_note_chapter_ids"])
+
+    def test_retired_question_answer_is_ignored(self):
+        save_answer("retired_question", "old answer")
+
+        progress = get_progress(CHAPTERS)
+
+        self.assertNotIn("retired_question", progress["answers"])
+        self.assertNotIn("retired_question", progress["solved_question_ids"])
+        self.assertEqual(progress["solved_count"], 0)
 
 
 if __name__ == "__main__":

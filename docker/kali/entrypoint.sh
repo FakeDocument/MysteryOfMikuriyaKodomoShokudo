@@ -6,7 +6,7 @@ export HOME=/home/player
 export DISPLAY=:1
 
 mkdir -p "$HOME/.config/tigervnc"
-echo "${VNC_PASSWORD:-sushictf}" | vncpasswd -f > "$HOME/.config/tigervnc/passwd"
+echo "${VNC_PASSWORD:-99}" | vncpasswd -f > "$HOME/.config/tigervnc/passwd"
 chmod 600 "$HOME/.config/tigervnc/passwd"
 chown -R player:player "$HOME"
 
