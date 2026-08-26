@@ -123,7 +123,7 @@ def initialize_database() -> None:
 
 URL: http://portal.kaiiki-hozen.local/
 ユーザー名: mikuriya-partner
-パスワード: %XO1AEFmvwHqmdik
+パスワード: %X1AEFmvw
 
 外部協力者アカウントですので、閲覧・報告以外の操作はお控えください。
 次回の「特別メニュー」のスケジュールも、上記ポータルにて追ってご連絡します。

@@ -93,7 +93,7 @@
     },
     "ch3_portal_password": {
       "accepted": [
-        "%XO1AEFmvwHqmdik"
+        "%X1AEFmvw"
       ],
       "validation": "exact",
       "incorrect_message": "記号を含め、メール本文から一文字ずつ正確に転記しよう。"
