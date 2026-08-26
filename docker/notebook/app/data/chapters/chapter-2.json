@@ -3,14 +3,14 @@
   "chapter": {
     "id": "chapter-2",
     "number": "二",
-    "nav_title": "選ばれた子",
-    "title": "共有フォルダの記録",
+    "nav_title": "共有の奥",
+    "title": "Samba共有へ踏み込む",
     "date": "調査二日目",
     "eyebrow": "CHAPTER 02 / INTERNAL RECORDS",
-    "status_label": "内部資料",
+    "status_label": "共有調査",
     "available": true,
-    "objective": "Samba共有の資料を比較し、子どもの選定条件と政府関係者との接点を特定する。",
-    "lead": "店員用の共有フォルダには、食堂の温かな雰囲気とはまるで違う、乾いた調査記録が並んでいた。",
+    "objective": "神崎の認証情報でSamba共有へ接続し、店の内部資料から失踪事件につながる証拠と次の調査先を見つける。",
+    "lead": "第1章で組み立てた認証情報を使い、御厨水産のSambaへ踏み込む。何が保管されているかは、実際に中を調べるまで分からない。",
     "blocks": [
       {
         "type": "dialogue",
@@ -18,16 +18,36 @@
         "heading": {
           "number": "01",
           "kicker": "CONVERSATION LOG",
-          "title": "所長との作戦会議"
+          "title": "Sambaの入口を確かめる"
         },
         "messages": [
           {
+            "speaker": "player",
+            "text": "神崎のアカウントIDと初期パスワードは分かりました。でも、Sambaにはどうやって入るんですか？"
+          },
+          {
             "speaker": "director",
-            "text": "資料は揃いましたか。一人だけ見ていると、見たい答えしか見えません。選ばれた子と、選ばれなかった子を並べてください。"
+            "text": "smbclientを使います。Sambaの共有フォルダを調べたり、中へ接続したりするための道具です。まずは、店のサーバーが公開している共有名を確認しましょう。"
+          },
+          {
+            "speaker": "director",
+            "text": "調査端末のターミナルで smbclient -L //172.30.0.10 -U kanzaki と入力してください。-L は共有の一覧表示、-U はログインに使うアカウントIDの指定です。"
           },
           {
             "speaker": "player",
-            "text": "四人の子どもを比べるんですよね。……それにしても、子ども相手に『肉付き』って書き方、嫌な感じです。"
+            "text": "Password for と表示されました。ここに Kanzaki2019 を入力すればいいんですね。"
+          },
+          {
+            "speaker": "director",
+            "text": "ええ。パスワードは入力しても画面に文字や印が出ませんが、端末は受け取っています。そのまま正確に入力してEnterキーを押してください。"
+          },
+          {
+            "speaker": "player",
+            "text": "Sharename、Type、Commentという表が出ました。最後にSMB1へ接続できない、という表示もありますけど……失敗ですか？"
+          },
+          {
+            "speaker": "director",
+            "text": "表に共有が表示されていれば成功です。末尾の Unable to connect with SMB1 は、古い方式で追加のワークグループ一覧を取れなかったというだけです。今回はSharename列にある、TypeがDiskの共有名を記録してください。"
           }
         ]
       },
@@ -40,7 +60,7 @@
           "title": "見つけた証拠"
         },
         "label": "調査中に確認した事実や、気になった言葉を自由に書き留める",
-        "placeholder": "例：見つけたページ、人物名、数字、気になった表現……",
+        "placeholder": "例：共有名、ファイル名、人物名、気になった表現……",
         "action_label": "証拠を貼り込む"
       },
       {
@@ -56,37 +76,37 @@
         "messages": [
           {
             "speaker": "player",
-            "text": "家庭、交友関係、肉付き、備考。四人分を並べました。見れば見るほど気味が悪いです。"
+            "text": "Sambaで確認したことを、調査メモに残しました。"
           },
           {
             "speaker": "director",
-            "text": "その気味の悪さを、言葉にできれば推理になります。共通点より、条件から外れた子に注目してください。"
+            "text": "結構です。後で辿り直せるよう、見つけた場所も一緒に控えておくといいですよ。"
           }
         ]
       },
       {
         "type": "questions",
-        "id": "investigation",
+        "id": "share-discovery",
         "heading": {
           "number": "03",
-          "kicker": "INVESTIGATION",
-          "title": "調査結果を書き込む"
+          "kicker": "SAMBA ENUMERATION",
+          "title": "共有の名前を記録する"
         },
         "items": [
           {
             "type": "question",
-            "id": "ch2_selection_conditions",
-            "label": "推理 01",
-            "prompt": "『対象』に選ばれる二つの条件は？",
-            "placeholder": "二つの条件を文章で入力",
-            "input_mode": "text",
+            "id": "ch2_samba_share",
+            "label": "調査 01",
+            "prompt": "一覧に表示された、調査に使えそうな共有の名前は？",
+            "placeholder": "Sharename列の名前",
+            "input_mode": "latin",
             "blocks": [
               {
                 "type": "hints",
                 "id": "hints",
                 "items": [
-                  "『肉付き: 良質』でも対象外になった小林陽向の記録に注目する。",
-                  "選ばれた宮田・笑真に共通し、小林には当てはまらない人間関係の状態と、体格の評価を答える。"
+                  "smbclient -L //172.30.0.10 -U kanzaki を実行し、Sharename・Type・Commentと並ぶ表を確認してください。探すのはTypeがDiskの行です。",
+                  "Sharename列の staff が調査に使う共有名です。末尾に出るSMB1の警告ではなく、その前の共有一覧を読みましょう。"
                 ]
               },
               {
@@ -102,24 +122,78 @@
                 "messages": [
                   {
                     "speaker": "player",
-                    "text": "孤立していて、肉付きがいい子だけが選ばれてる。子ども食堂は、最初から子どもを選別するために……？"
+                    "text": "共有名は staff。認証も通っています。"
                   },
                   {
                     "speaker": "director",
-                    "text": "『提供』『特別顧客』。おやおや……随分ときな臭くなってきましたね。ただし、目的を決めつけるのはまだ早いですよ。"
+                    "text": "鍵は正しかったようですね。では一覧を眺めるだけでなく、その共有の中へ入りましょう。"
                   }
                 ]
               }
             ]
+          }
+        ]
+      },
+      {
+        "type": "dialogue",
+        "id": "after-share-discovery",
+        "visible_when": {
+          "event": "questions_solved",
+          "question_ids": [
+            "ch2_samba_share"
+          ]
+        },
+        "heading": {
+          "number": "04",
+          "kicker": "CONNECT TO SHARE",
+          "title": "staff共有へ接続する"
+        },
+        "messages": [
+          {
+            "speaker": "director",
+            "text": "ターミナルで smbclient //172.30.0.10/staff -U kanzaki を実行し、先ほどと同じパスワードを入力してください。smb: \\> と表示されれば接続成功です。"
           },
           {
+            "speaker": "player",
+            "text": "入りました。普段のターミナルとは表示が違いますね。"
+          },
+          {
+            "speaker": "director",
+            "text": "今はサーバー上の共有を操作しています。ls で一覧表示、cd ディレクトリ名 で移動、get ファイル名 で調査端末の /home/player へ取得できます。終了は quit です。取得したファイルはMousepadなどで読めますよ。"
+                  }
+                ]
+      },
+      {
+        "type": "questions",
+        "id": "record-comparison",
+        "visible_when": {
+          "event": "questions_solved",
+          "question_ids": [
+            "ch2_samba_share"
+            ]
+          },
+        "heading": {
+          "number": "05",
+          "kicker": "INTERNAL FILES",
+          "title": "共有内の記録を調べる"
+        },
+        "items": [
+          {
             "type": "question",
-            "id": "ch2_government_contact",
+            "id": "ch2_past_person",
             "label": "調査 02",
-            "prompt": "顧客台帳に『特別顧客』として載る政府関係者は？",
+            "prompt": "共有内の資料を調べ、今回の失踪と似た過去の人物を記録してください。",
             "placeholder": "氏名を入力",
             "input_mode": "text",
             "blocks": [
+              {
+                "type": "hints",
+                "id": "hints",
+                "items": [
+                  "共有内の人物ごとの資料を読み、現在の事件と似た扱いが記録された過去の人物を探してください。",
+                  "人物ごとの記録が置かれたディレクトリで、2022年の記録と現在の記録の備考欄を比べてください。"
+                ]
+              },
               {
                 "type": "dialogue",
                 "id": "follow-up",
@@ -133,30 +207,111 @@
                 "messages": [
                   {
                     "speaker": "player",
-                    "text": "特別顧客は片柳修治。国土保全庁の……海域保全対策室、調整係長？ 寿司屋の顧客台帳に政府の人が？"
-                  },
-                  {
-                    "speaker": "director",
-                    "text": "場違いな名前ほど、いい手掛かりになります。地域の寿司屋と政府組織。二本の線が、ようやく交わりましたね。"
+                    "text": "宮田奏太。2022年に『特別顧客に提供』された、とあります。"
                   }
                 ]
               }
             ]
-          },
+          }
+        ]
+      },
+      {
+        "type": "questions",
+        "id": "external-connection",
+        "visible_when": {
+          "event": "questions_solved",
+          "question_ids": [
+            "ch2_past_person"
+          ]
+        },
+        "heading": {
+          "number": "06",
+          "kicker": "EXTERNAL CONNECTION",
+          "title": "店外とのつながりを調べる"
+        },
+        "items": [
           {
             "type": "question",
-            "id": "ch2_webmail_login",
+            "id": "ch2_external_person",
             "label": "調査 03",
-            "prompt": "神崎の社内WebメールのログインIDは？",
-            "placeholder": "業務メールアドレス",
-            "input_mode": "email",
+            "prompt": "共有内の資料から、店外との不自然なつながりを示す人物を記録してください。",
+            "placeholder": "氏名を入力",
+            "input_mode": "text",
             "blocks": [
               {
                 "type": "hints",
                 "id": "hints",
                 "items": [
-                  "職員名簿と、社内メール利用案内を一緒に確認する。",
-                  "社内WebメールのログインIDには、職員名簿の業務メールアドレスを使う。"
+                  "人物の記録だけでなく、共有トップに並ぶ別の分類も調べてください。店の外から来る人物の扱いに注目します。",
+                  "顧客に関する資料のうち、一般客と分けて扱われる人物の所属と役職を確認してください。"
+                ]
+              },
+              {
+                "type": "dialogue",
+                "id": "follow-up",
+                "visible_when": {
+                  "event": "question_solved"
+                },
+                "heading": {
+                  "kicker": "FOLLOW-UP",
+                  "title": "調査結果を受けて"
+                },
+                "messages": [
+                  {
+                    "speaker": "player",
+                    "text": "特別顧客は片柳修治。国土保全庁の……海域保全対策室、調整係長？ 寿司屋の顧客台帳に政府の人が？それに『提供』『特別顧客』……って……"
+                  },
+                  {
+                    "speaker": "director",
+                    "text": "気持ちはわかりますが、早合点するのは禁物ですよ。もう少し、調べていきましょう"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "questions",
+        "id": "next-access",
+        "visible_when": {
+          "event": "questions_solved",
+          "question_ids": [
+            "ch2_external_person"
+          ]
+        },
+        "heading": {
+          "number": "07",
+          "kicker": "NEXT ACCESS",
+          "title": "次の調査先を組み立てる"
+          },
+        "items": [
+          {
+            "type": "question",
+            "id": "ch2_next_access",
+            "label": "調査 04",
+            "prompt": "共有内の資料を組み合わせ、次にアクセスする場所と、その入口で使うIDを記録してください。",
+            "answer_fields": [
+              {
+                "id": "url",
+                "label": "URL",
+                "placeholder": "http:// から入力",
+                "input_mode": "url"
+              },
+              {
+                "id": "login_id",
+                "label": "ログインID",
+                "placeholder": "確認したIDを入力",
+                "input_mode": "email"
+              }
+            ],
+            "blocks": [
+              {
+                "type": "hints",
+                "id": "hints",
+                "items": [
+                  "共有トップの別の分類も調べ、システムの利用方法を説明する資料と職員情報を照合してください。",
+                  "社内システムのURLが載る案内と、第1章で認証情報を導き出した人物の業務用連絡先を組み合わせます。"
                 ]
               },
               {

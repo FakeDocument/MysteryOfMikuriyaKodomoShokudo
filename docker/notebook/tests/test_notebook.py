@@ -42,10 +42,24 @@ class AnswerValidationTest(unittest.TestCase):
         self.assertTrue(validate_answer(question, "kanzaki\tKanzaki2019"))
         self.assertFalse(validate_answer(question, "kanzaki\tkanzaki2019"))
 
-    def test_reasoning_answer_requires_both_terms(self):
-        question = QUESTIONS_BY_ID["ch2_selection_conditions"]
-        self.assertTrue(validate_answer(question, "孤立していて、肉付きが良いこと"))
-        self.assertFalse(validate_answer(question, "孤立していること"))
+    def test_past_person_accepts_name_variants(self):
+        question = QUESTIONS_BY_ID["ch2_past_person"]
+        self.assertTrue(validate_answer(question, "宮田 奏太"))
+        self.assertTrue(validate_answer(question, "ミヤタソウタ"))
+        self.assertFalse(validate_answer(question, "佐々木笑真"))
+
+    def test_next_access_requires_url_and_login_id(self):
+        question = QUESTIONS_BY_ID["ch2_next_access"]
+        self.assertTrue(
+            validate_answer(
+                question,
+                "http://mail.mikuriya-suisan.local/\t"
+                "hitomi.kanzaki@mikuriya-suisan.local",
+            )
+        )
+        self.assertFalse(
+            validate_answer(question, "hitomi.kanzaki@mikuriya-suisan.local")
+        )
 
     def test_port_scan_answers_require_port_and_service_name(self):
         web = QUESTIONS_BY_ID["ch1_web_port_service"]
@@ -64,6 +78,11 @@ class AnswerValidationTest(unittest.TestCase):
         self.assertTrue(validate_answer(question, "/admin/\t/backup/"))
         self.assertTrue(validate_answer(question, "/backup/\t/admin/"))
         self.assertFalse(validate_answer(question, "/admin/"))
+
+    def test_samba_share_answer_matches_discovered_share(self):
+        question = QUESTIONS_BY_ID["ch2_samba_share"]
+        self.assertTrue(validate_answer(question, "staff"))
+        self.assertFalse(validate_answer(question, "IPC$"))
 
     def test_public_data_does_not_expose_answers_or_unsolved_dialogue(self):
         chapters = public_chapters()
@@ -379,6 +398,127 @@ class ContentFileTest(unittest.TestCase):
         )
         self.assertNotIn("Testing", dialogue)
         self.assertNotIn("==> DIRECTORY:", dialogue)
+
+    def test_chapter_two_starts_with_samba_and_unlocks_discoveries_in_order(self):
+        def chapter_two_with(solved_question_ids):
+            progress = {
+                "solved_question_ids": solved_question_ids,
+                "acknowledged_note_chapter_ids": [],
+                "unlocked_chapter_ids": ["prologue", "chapter-1", "chapter-2"],
+            }
+            return public_chapters(progress)[2]
+
+        start = chapter_two_with([])
+        share_solved = chapter_two_with(["ch2_samba_share"])
+        past_person_solved = chapter_two_with(
+            ["ch2_samba_share", "ch2_past_person"]
+        )
+        external_person_solved = chapter_two_with(
+            [
+                "ch2_samba_share",
+                "ch2_past_person",
+                "ch2_external_person",
+            ]
+        )
+
+        opening_dialogue = "".join(
+            message["text"] for message in start["blocks"][0]["messages"]
+        )
+        self.assertIn("smbclient -L //172.30.0.10 -U kanzaki", opening_dialogue)
+        self.assertIn("Unable to connect with SMB1", opening_dialogue)
+        self.assertEqual(
+            [question["id"] for question in questions_in(start)],
+            ["ch2_samba_share"],
+        )
+
+        self.assertEqual(
+            [question["id"] for question in questions_in(share_solved)],
+            ["ch2_samba_share", "ch2_past_person"],
+        )
+        share_transition = next(
+            block
+            for block in share_solved["blocks"]
+            if block["id"] == "after-share-discovery"
+        )
+        share_dialogue = "".join(
+            message["text"] for message in share_transition["messages"]
+        )
+        self.assertIn("smbclient //172.30.0.10/staff -U kanzaki", share_dialogue)
+        self.assertIn("ls で一覧表示", share_dialogue)
+        self.assertIn("cd ディレクトリ名", share_dialogue)
+        self.assertIn("get ファイル名", share_dialogue)
+        for undiscovered_term in (
+            "01_child_records",
+            "sasaki_ema.txt",
+            "宮田奏太",
+            "片柳修治",
+            "特別顧客",
+            "提供",
+            "Webメール",
+            "mail.mikuriya-suisan.local",
+        ):
+            self.assertNotIn(undiscovered_term, share_dialogue)
+
+        self.assertEqual(
+            [question["id"] for question in questions_in(past_person_solved)],
+            [
+                "ch2_samba_share",
+                "ch2_past_person",
+                "ch2_external_person",
+            ],
+        )
+
+        self.assertEqual(
+            [question["id"] for question in questions_in(external_person_solved)],
+            [
+                "ch2_samba_share",
+                "ch2_past_person",
+                "ch2_external_person",
+                "ch2_next_access",
+            ],
+        )
+
+        question_by_id = {
+            question["id"]: question for question in questions_in(external_person_solved)
+        }
+        self.assertEqual(
+            [field["label"] for field in question_by_id["ch2_next_access"]["answer_fields"]],
+            ["URL", "ログインID"],
+        )
+
+        prompts = {
+            question_id: question_by_id[question_id]["prompt"]
+            for question_id in (
+                "ch2_past_person",
+                "ch2_external_person",
+                "ch2_next_access",
+            )
+        }
+        for term in ("宮田", "笑真", "提供", "特別顧客", "01_child_records", ".txt"):
+            self.assertNotIn(term, prompts["ch2_past_person"])
+        for term in ("片柳", "政府", "国土保全庁", "顧客台帳"):
+            self.assertNotIn(term, prompts["ch2_external_person"])
+        for term in ("神崎", "Webメール", "mail.mikuriya-suisan.local", "03_staff_records"):
+            self.assertNotIn(term, prompts["ch2_next_access"])
+
+        chapter_intro = start["objective"] + start["lead"] + opening_dialogue
+        for term in (
+            "01_child_records",
+            "宮田奏太",
+            "片柳修治",
+            "政府関係者",
+            "mail.mikuriya-suisan.local",
+        ):
+            self.assertNotIn(term, chapter_intro)
+
+        self.assertNotIn(
+            "after-child-records",
+            [block["id"] for block in past_person_solved["blocks"]],
+        )
+        self.assertNotIn(
+            "after-customer-records",
+            [block["id"] for block in external_person_solved["blocks"]],
+        )
 
     def test_multi_question_visibility_rejects_unknown_question(self):
         with tempfile.TemporaryDirectory() as temp_dir:

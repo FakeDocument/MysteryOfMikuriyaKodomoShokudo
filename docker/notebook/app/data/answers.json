@@ -5,14 +5,20 @@
       "accepted": [
         "遠藤美咲",
         "えんどうみさき",
-        "エンドウミサキ"
+        "エンドウミサキ",
+        "遠藤 美咲",
+        "えんどう みさき",
+        "エンドウ ミサキ"
       ]
     },
     "prologue_missing": {
       "accepted": [
         "佐々木笑真",
         "ささきえま",
-        "ササキエマ"
+        "ササキエマ",
+        "佐々木 笑真",
+        "ささき えま",
+        "ササキ エマ"
       ]
     },
     "ch1_web_port_service": {
@@ -43,23 +49,35 @@
       "validation": "exact",
       "incorrect_message": "アカウントIDの小文字表記と、初期パスワードの大文字・小文字・入社年をもう一度確認しよう。"
     },
-    "ch2_selection_conditions": {
-      "validation": "contains_all",
-      "required_terms": [
-        "孤立",
-        "肉付き"
+    "ch2_samba_share": {
+      "accepted": [
+        "staff"
       ]
     },
-    "ch2_government_contact": {
+    "ch2_past_person": {
+      "accepted": [
+        "宮田奏太",
+        "みやたそうた",
+        "ミヤタソウタ",
+        "宮田 奏太",
+        "みやた そうた",
+        "ミヤタ ソウタ"
+      ]
+    },
+    "ch2_external_person": {
       "accepted": [
         "片柳修治",
         "かたやなぎしゅうじ",
-        "カタヤナギシュウジ"
+        "カタヤナギシュウジ",
+        "片柳 修治",
+        "かたやな ぎしゅうじ",
+        "カタヤナギ シュウジ"
       ]
     },
-    "ch2_webmail_login": {
+    "ch2_next_access": {
       "accepted": [
-        "hitomi.kanzaki@mikuriya-suisan.local"
+        "http://mail.mikuriya-suisan.local/\thitomi.kanzaki@mikuriya-suisan.local",
+        "http://mail.mikuriya-suisan.local\thitomi.kanzaki@mikuriya-suisan.local"
       ]
     },
     "ch3_portal_url": {
