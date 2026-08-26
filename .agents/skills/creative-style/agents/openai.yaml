@@ -1,0 +1,4 @@
+interface:
+  display_name: "創作スタイル"
+  short_description: "創作上の判断軸を再現し、会話・証拠・設定を一貫させる"
+  default_prompt: "$creative-style を使い、私の創作スタイルに合わせてこの場面を執筆・推敲してください。"
