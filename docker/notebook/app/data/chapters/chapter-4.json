@@ -5,12 +5,60 @@
     "number": "四",
     "nav_title": "海域保全対策室",
     "title": "海域保全対策室",
-    "date": "証拠待ち",
-    "eyebrow": "CHAPTER 04",
+    "date": "2026年9月10日 18時00分",
+    "eyebrow": "CHAPTER 04 / GOVERNMENT SITE",
     "status_label": "未開封",
     "available": false,
-    "objective": "これまでの調査方法を使って、内部ポータルの入口を調べる。",
-    "lead": "次の調査記録は、まだ封が切られていない。",
-    "blocks": []
+    "objective": "片柳の業務メールアドレスから特定したドメインを足掛かりに、海域保全対策室のサイトを調べる。",
+    "lead": "片柳のメールアドレスに残されたドメインを、次の入口として調べる。",
+    "blocks": [
+      {
+        "type": "dialogue",
+        "id": "initial-conversation",
+        "heading": {
+          "number": "01",
+          "kicker": "CONVERSATION LOG",
+          "title": "それぞれの調査"
+        },
+        "messages": [
+          {
+            "speaker": "player",
+            "text": "まずは、見つけたドメインを調べてみます。"
+          },
+          {
+            "speaker": "director",
+            "text": "お願いします。私は少し出てきます。"
+          },
+          {
+            "speaker": "player",
+            "text": "え！？今からですか！！？？"
+          },
+          {
+            "speaker": "director",
+            "text": "ええ。今後のことを考えて、準備をする必要があるので。"
+          },
+          {
+            "speaker": "player",
+            "text": "でも、僕1人でハッキングなんて無理ですよ！"
+          },
+          {
+            "speaker": "director",
+            "text": "ふむ……まあ、きっとこれまで教えたテクニックで攻略できるはずです。勘ですが。"
+          },
+          {
+            "speaker": "player",
+            "text": "勘って……。"
+          },
+          {
+            "speaker": "director",
+            "text": "安心してください。付箋にヒントは残しておきますので。それに、私は『神懸かり』ですから。"
+          },
+          {
+            "speaker": "player",
+            "text": "…………分かりました。でも、無茶だけはしないでくださいね。"
+          }
+        ]
+      }
+    ]
   }
 }

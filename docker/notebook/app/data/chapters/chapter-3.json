@@ -5,7 +5,7 @@
     "number": "三",
     "nav_title": "政府への糸",
     "title": "御厨のメールを追う",
-    "date": "調査三日目",
+    "date": "2026年9月10日 16時30分",
     "eyebrow": "CHAPTER 03 / WEBMAIL",
     "status_label": "通信記録",
     "available": true,
@@ -44,7 +44,7 @@
           "title": "見つけた証拠"
         },
         "label": "調査中に確認した事実や、気になった言葉を自由に書き留める",
-        "placeholder": "例：見つけたページ、人物名、数字、気になった表現……",
+        "placeholder": "例：見つけたメール、人物名、所属、気になった表現……",
         "action_label": "証拠を貼り込む"
       },
       {
@@ -70,27 +70,27 @@
       },
       {
         "type": "questions",
-        "id": "investigation",
+        "id": "email-investigation",
         "heading": {
           "number": "03",
           "kicker": "INVESTIGATION",
-          "title": "調査結果を書き込む"
+          "title": "検索結果を確認する"
         },
         "items": [
           {
             "type": "question",
-            "id": "ch3_portal_url",
+            "id": "ch3_contact_email",
             "label": "調査 01",
-            "prompt": "検索結果から、次にアクセスすべきURLを記録してください。",
-            "placeholder": "http:// から入力",
-            "input_mode": "url",
+            "prompt": "検索結果に現れた、片柳の業務メールアドレスを記録してください。",
+            "placeholder": "メールアドレス",
+            "input_mode": "email",
             "blocks": [
               {
                 "type": "hints",
                 "id": "hints",
                 "items": [
-                  "ログイン画面ではなく、ログイン後のメール検索欄を調べる。",
-                  "検索語に `' OR 1=1 -- ` を入力し、他利用者のメール本文が結果へ混ざるか確認する。"
+                  "ログイン画面ではなく、ログイン後のメール検索欄を調べる。検索結果の範囲が変わる入力を試してみる。",
+                  "検索語に `' OR 1=1 -- ` を入力し、他利用者のメールが結果へ混ざるか確認する。"
                 ]
               },
               {
@@ -115,95 +115,95 @@
                 ]
               }
             ]
-          },
-          {
-            "type": "question",
-            "id": "ch3_portal_user",
-            "label": "調査 02",
-            "prompt": "同じメールに記載されたユーザー名は？",
-            "placeholder": "ユーザー名",
-            "input_mode": "latin",
-            "blocks": [
-              {
-                "type": "dialogue",
-                "id": "follow-up",
-                "visible_when": {
-                  "event": "question_solved"
-                },
-                "heading": {
-                  "kicker": "FOLLOW-UP",
-                  "title": "調査結果を受けて"
-                },
-                "messages": [
-                  {
-                    "speaker": "player",
-                    "text": "御厨水産向けに、専用のアカウントが用意されています。"
-                  },
-                  {
-                    "speaker": "director",
-                    "text": "『閲覧・報告以外はお控えください』だそうですよ。客ではなく、協力者として扱われているわけですね。"
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "type": "question",
-            "id": "ch3_portal_password",
-            "label": "調査 03",
-            "prompt": "同じメールに記載されたパスワードは？",
-            "placeholder": "記号・大文字・小文字を区別して入力",
-            "input_mode": "latin",
-            "blocks": [
-              {
-                "type": "dialogue",
-                "id": "follow-up",
-                "visible_when": {
-                  "event": "question_solved"
-                },
-                "heading": {
-                  "kicker": "FOLLOW-UP",
-                  "title": "調査結果を受けて"
-                },
-                "messages": [
-                  {
-                    "speaker": "player",
-                    "text": "パスワードも確認しました。"
-                  },
-                  {
-                    "speaker": "director",
-                    "text": "では、認証情報は原文どおり揃いましたね。"
-                  }
-                ]
-              }
-            ]
           }
         ]
       },
       {
         "type": "dialogue",
-        "id": "next-stage-conversation",
+        "id": "after-contact-email",
         "visible_when": {
           "event": "questions_solved",
           "question_ids": [
-            "ch3_portal_url",
-            "ch3_portal_user",
-            "ch3_portal_password"
+            "ch3_contact_email"
           ]
         },
         "heading": {
           "number": "04",
           "kicker": "CONVERSATION LOG",
-          "title": "次の調査先"
+          "title": "片柳からのメール"
         },
         "messages": [
           {
             "speaker": "player",
-            "text": "政府ポータル……？どういうことでしょう？それに、特別メニュー候補者って……。"
+            "text": "政府が関わってる……？どういうことでしょう？それに、特別メニュー候補者って……。"
           },
           {
             "speaker": "director",
-            "text": "どうやら我々の想像を超えたことが起きてるようですよ。続きは海域保全対策室にあるようです。記録を見せてもらいましょう。"
+            "text": "どうやら我々の想像を超えたことが起きてるようですね。"
+          },
+          {
+            "speaker": "player",
+            "text": "ですが、これからはどうすればいいんでしょう……？"
+          },
+          {
+            "speaker": "director",
+            "text": "ひとまず、彼ら……海域保全対策室のアドレスを手掛かりにするのがいいでしょう。"
+          }
+        ]
+      },
+      {
+        "type": "questions",
+        "id": "domain-investigation",
+        "visible_when": {
+          "event": "questions_solved",
+          "question_ids": [
+            "ch3_contact_email"
+          ]
+        },
+        "heading": {
+          "number": "05",
+          "kicker": "INVESTIGATION",
+          "title": "連絡先を読み解く"
+        },
+        "items": [
+          {
+            "type": "question",
+            "id": "ch3_government_domain",
+            "label": "調査 02",
+            "prompt": "片柳の業務メールアドレスから、所属先を示すドメインを記録してください。",
+            "placeholder": "ドメイン名",
+            "input_mode": "latin",
+            "blocks": [
+              {
+                "type": "hints",
+                "id": "hints",
+                "items": [
+                  "メールアドレスは、`@`より前が利用者、後ろが所属先やサービスのドメインを表す。御厨水産の業務アドレスと見比べる。",
+                  "片柳の業務メールアドレスを `@` で区切り、右側のドメイン名を入力する。"
+                ]
+              },
+              {
+                "type": "dialogue",
+                "id": "follow-up",
+                "visible_when": {
+                  "event": "question_solved"
+                },
+                "heading": {
+                  "kicker": "FOLLOW-UP",
+                  "title": "調査結果を受けて"
+                },
+                "messages": [
+                  {
+                    "speaker": "player",
+                    "text": "`kaiiki-hozen.local`。海域保全対策室のドメインですね。"
+                  },
+                  {
+                    "speaker": "director",
+                    "text": "ええ。店の外にも、調べる場所ができました。"
+                  }
+                ]
+              }
+            ]
           }
         ]
       }

@@ -3,6 +3,7 @@ import os
 import shutil
 import tempfile
 import unittest
+from datetime import datetime
 from pathlib import Path
 
 from app.content import (
@@ -519,6 +520,106 @@ class ContentFileTest(unittest.TestCase):
             "after-customer-records",
             [block["id"] for block in external_person_solved["blocks"]],
         )
+
+    def test_chapter_three_reveals_domain_in_order_and_chapter_four_keeps_destination_hidden(self):
+        def chapter_three_with(solved_question_ids):
+            progress = {
+                "solved_question_ids": solved_question_ids,
+                "acknowledged_note_chapter_ids": [],
+                "unlocked_chapter_ids": [
+                    "prologue",
+                    "chapter-1",
+                    "chapter-2",
+                    "chapter-3",
+                ],
+            }
+            return public_chapters(progress)[3]
+
+        start = chapter_three_with([])
+        self.assertEqual(
+            [question["id"] for question in questions_in(start)],
+            ["ch3_contact_email"],
+        )
+        self.assertTrue(
+            validate_answer(
+                QUESTIONS_BY_ID["ch3_contact_email"],
+                "shuji.katayanagi@kaiiki-hozen.local",
+            )
+        )
+        self.assertTrue(
+            validate_answer(
+                QUESTIONS_BY_ID["ch3_government_domain"],
+                "kaiiki-hozen.local",
+            )
+        )
+
+        email_solved = chapter_three_with(["ch3_contact_email"])
+        self.assertEqual(
+            [question["id"] for question in questions_in(email_solved)],
+            ["ch3_contact_email", "ch3_government_domain"],
+        )
+        self.assertIn(
+            "after-contact-email",
+            [block["id"] for block in email_solved["blocks"]],
+        )
+        email_dialogue = "".join(
+            message["text"]
+            for block in email_solved["blocks"]
+            if block["type"] == "dialogue"
+            for message in block["messages"]
+        )
+        self.assertNotIn("第2章", email_dialogue)
+        self.assertNotIn(
+            "kaiiki-hozen.local",
+            email_dialogue,
+        )
+
+        completed = chapter_three_with(
+            ["ch3_contact_email", "ch3_government_domain"]
+        )
+        domain_question = next(
+            question
+            for question in questions_in(completed)
+            if question["id"] == "ch3_government_domain"
+        )
+        self.assertIn(
+            "kaiiki-hozen.local",
+            "".join(
+                message["text"]
+                for block in domain_question["blocks"]
+                if block["type"] == "dialogue"
+                for message in block["messages"]
+            ),
+        )
+        self.assertNotIn(
+            "御厨水産を見てきます",
+            json.dumps(CHAPTERS[3], ensure_ascii=False),
+        )
+
+        chapter_four_opening = CHAPTERS[4]["blocks"][0]
+        chapter_four_dialogue = "".join(
+            message["text"] for message in chapter_four_opening["messages"]
+        )
+        self.assertNotIn("御厨水産", chapter_four_dialogue)
+        self.assertNotIn("昨日", chapter_four_dialogue)
+        for instruction in ("nmap", "DIRB", "SQLインジェクション"):
+            self.assertNotIn(instruction, chapter_four_dialogue)
+
+        chapter_datetimes = []
+        for chapter in CHAPTERS:
+            chapter_datetimes.append(
+                datetime.strptime(chapter["date"], "%Y年%m月%d日 %H時%M分")
+            )
+        self.assertEqual(1, len({value.date() for value in chapter_datetimes}))
+        self.assertEqual(sorted(chapter_datetimes), chapter_datetimes)
+
+        chapter_text = json.dumps(CHAPTERS[3], ensure_ascii=False)
+        for obsolete_term in (
+            "portal.kaiiki-hozen.local",
+            "mikuriya-partner",
+            "%X1AEFmvw",
+        ):
+            self.assertNotIn(obsolete_term, chapter_text)
 
     def test_multi_question_visibility_rejects_unknown_question(self):
         with tempfile.TemporaryDirectory() as temp_dir:

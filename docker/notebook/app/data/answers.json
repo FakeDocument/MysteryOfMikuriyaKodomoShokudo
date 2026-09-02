@@ -80,23 +80,15 @@
         "http://mail.mikuriya-suisan.local\thitomi.kanzaki@mikuriya-suisan.local"
       ]
     },
-    "ch3_portal_url": {
+    "ch3_contact_email": {
       "accepted": [
-        "http://portal.kaiiki-hozen.local",
-        "http://portal.kaiiki-hozen.local/"
+        "shuji.katayanagi@kaiiki-hozen.local"
       ]
     },
-    "ch3_portal_user": {
+    "ch3_government_domain": {
       "accepted": [
-        "mikuriya-partner"
+        "kaiiki-hozen.local"
       ]
-    },
-    "ch3_portal_password": {
-      "accepted": [
-        "%X1AEFmvw"
-      ],
-      "validation": "exact",
-      "incorrect_message": "記号を含め、メール本文から一文字ずつ正確に転記しよう。"
     }
   }
 }
