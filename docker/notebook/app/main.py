@@ -23,7 +23,13 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="九十九探偵事務所 調査ノート", lifespan=lifespan)
+app = FastAPI(
+    title="九十九探偵事務所 調査ノート",
+    lifespan=lifespan,
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
+)
 app.mount("/static", StaticFiles(directory=APP_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=str(APP_DIR / "templates"))
 
