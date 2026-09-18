@@ -126,7 +126,7 @@ def get_progress(chapters: list[dict[str, Any]]) -> dict[str, Any]:
         unlocked = chapter["id"] == "prologue" or previous_complete
         if unlocked:
             unlocked_ids.append(chapter["id"])
-        complete = bool(question_ids) and all(question_id in solved_ids for question_id in question_ids)
+        complete = unlocked and all(question_id in solved_ids for question_id in question_ids)
         if complete:
             completed_ids.append(chapter["id"])
         previous_complete = unlocked and complete

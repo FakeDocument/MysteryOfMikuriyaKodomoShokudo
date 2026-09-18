@@ -20,7 +20,7 @@ ANSWER_ONLY_KEYS = {"accepted", "validation", "required_terms", "incorrect_messa
 ALLOWED_VALIDATIONS = {"one_of", "exact", "contains_all"}
 ALLOWED_SPEAKERS = {"director", "player"}
 ALLOWED_VISIBILITY_EVENTS = {"note_saved", "question_solved", "questions_solved"}
-ALLOWED_TOP_LEVEL_BLOCKS = {"dialogue", "document", "evidence_note", "questions"}
+ALLOWED_TOP_LEVEL_BLOCKS = {"dialogue", "document", "evidence_note", "questions", "report"}
 ALLOWED_QUESTION_BLOCKS = {"hints", "dialogue"}
 DIALOGUE_IMAGE_PATH = re.compile(
     r"^/static/images/[a-z0-9][a-z0-9._-]*\.(?:png|jpe?g|webp)$"
@@ -365,6 +365,25 @@ def _validate_chapter_blocks(
         elif block_type == "evidence_note":
             for key in ("label", "placeholder", "action_label"):
                 _require_text(block.get(key), f"{location}.{key}")
+        elif block_type == "report":
+            _validate_visibility(
+                block.get("visible_when"),
+                f"{location}.visible_when",
+                "questions_solved",
+            )
+            for key in ("subject", "conclusion"):
+                _require_text(block.get(key), f"{location}.{key}")
+            items = block.get("items")
+            if not isinstance(items, list) or not items:
+                raise ContentConfigurationError(f"{location}.items は空でない配列にしてください。")
+            for item_index, item in enumerate(items):
+                item_location = f"{location}.items[{item_index}]"
+                if not isinstance(item, dict) or set(item) != {"label", "value"}:
+                    raise ContentConfigurationError(
+                        f"{item_location} は label と value だけを持つオブジェクトにしてください。"
+                    )
+                for key in ("label", "value"):
+                    _require_text(item[key], f"{item_location}.{key}")
         else:
             _validate_visibility(
                 block.get("visible_when"),

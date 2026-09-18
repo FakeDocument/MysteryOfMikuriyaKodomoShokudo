@@ -7,10 +7,71 @@
     "title": "調査報告書",
     "date": "2026年9月10日 23時30分",
     "eyebrow": "FINAL REPORT",
-    "status_label": "未開封",
-    "available": false,
-    "objective": "すべての証拠をつなぎ、笑真の引き渡しを阻止する。",
-    "lead": "最後のページは、まだ白紙のままだ。",
-    "blocks": []
+    "status_label": "報告完了",
+    "available": true,
+    "objective": "調査で判明した事実を報告書にまとめ、笑真の保護へ動き出す。",
+    "lead": "引き渡しの日時と場所が分かった。調査ノートの最後のページを開く。",
+    "blocks": [
+      {
+        "type": "report",
+        "id": "completed-report",
+        "heading": {
+          "number": "01",
+          "kicker": "FINAL REPORT",
+          "title": "完成した調査報告書"
+        },
+        "subject": "佐々木笑真 行方不明事案",
+        "items": [
+          {
+            "label": "依頼人",
+            "value": "遠藤美咲"
+          },
+          {
+            "label": "判明した事実",
+            "value": "御厨水産はこども食堂で対象を選び、海域保全対策室の計画に従ってオオクチ様への生贄としていた。"
+          },
+          {
+            "label": "過去の対象",
+            "value": "宮田奏太（2022年）"
+          },
+          {
+            "label": "現在の対象",
+            "value": "佐々木笑真"
+          },
+          {
+            "label": "引き渡し予定",
+            "value": "2026年9月11日 午前1時"
+          },
+          {
+            "label": "引き渡し場所",
+            "value": "御厨水産・裏手の荷捌き所"
+          }
+        ],
+        "conclusion": "政府側への引き渡し前に、佐々木笑真を保護する必要がある。"
+      },
+      {
+        "type": "dialogue",
+        "id": "final-call",
+        "heading": {
+          "number": "02",
+          "kicker": "INCOMING CALL",
+          "title": "所長からの電話"
+        },
+        "messages": [
+          {
+            "speaker": "player",
+            "text": "……電話だ。所長？ 報告書ができました。笑真の引き渡しは9月11日午前1時、御厨水産の裏手の荷捌き所です。"
+          },
+          {
+            "speaker": "director",
+            "text": "分かりました。間に合います。キミはその報告書を持って来てください。私も向かいます。"
+          },
+          {
+            "speaker": "player",
+            "text": "はい。笑真を迎えに行きましょう。"
+          }
+        ]
+      }
+    ]
   }
 }

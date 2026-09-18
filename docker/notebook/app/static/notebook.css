@@ -445,8 +445,60 @@ textarea:focus-visible {
 .conversation-section,
 .source-document,
 .evidence-section,
-.questions-section {
+.questions-section,
+.report-section {
   margin-top: 46px;
+}
+
+.case-report {
+  width: min(720px, 100%);
+  margin: 28px auto 42px;
+  padding: clamp(24px, 4vw, 42px);
+  background: #fdfbf4;
+  border: 1px solid rgba(70, 69, 54, 0.28);
+  box-shadow: 7px 9px 0 rgba(80, 66, 40, 0.08);
+}
+
+.case-report h3 {
+  margin: 0 0 24px;
+  padding-bottom: 14px;
+  border-bottom: 2px solid #445d53;
+  font-family: var(--font-serif);
+  font-size: clamp(18px, 2.5vw, 23px);
+  letter-spacing: 0.06em;
+}
+
+.case-report dl {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.38fr) 1fr;
+  margin: 0;
+  border-top: 1px solid rgba(70, 69, 54, 0.18);
+}
+
+.case-report dt,
+.case-report dd {
+  margin: 0;
+  padding: 13px 10px;
+  border-bottom: 1px solid rgba(70, 69, 54, 0.18);
+  line-height: 1.7;
+}
+
+.case-report dt {
+  color: #59635c;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.case-report dd {
+  font-weight: 600;
+}
+
+.report-conclusion {
+  margin: 24px 0 0;
+  padding: 15px 18px;
+  border-left: 3px solid #a35144;
+  background: rgba(163, 81, 68, 0.06);
+  line-height: 1.8;
 }
 
 .request-letter {

@@ -23,6 +23,7 @@ chapters/
 - `document`: 依頼書などの文書
 - `evidence_note`: 自由記述の証拠メモ
 - `questions`: 設問カードのまとまり
+- `report`: 正答後に表示する、項目と結論を持つ調査報告書
 
 `questions.items`の各`question`も`blocks`を持ち、次の子ブロックを順番に表示できます。
 

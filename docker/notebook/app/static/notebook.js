@@ -272,6 +272,33 @@
     return section;
   }
 
+  function renderReportBlock(block, context) {
+    const section = document.createElement("section");
+    section.className = "report-section";
+    const headingId = `heading-${context.chapter.id}-${block.id}`;
+    section.setAttribute("aria-labelledby", headingId);
+    section.append(createSectionHeading(block, headingId));
+
+    const report = document.createElement("article");
+    report.className = "case-report";
+    const subject = document.createElement("h3");
+    subject.textContent = block.subject;
+    const facts = document.createElement("dl");
+    block.items.forEach((item) => {
+      const label = document.createElement("dt");
+      label.textContent = item.label;
+      const value = document.createElement("dd");
+      value.textContent = item.value;
+      facts.append(label, value);
+    });
+    const conclusion = document.createElement("p");
+    conclusion.className = "report-conclusion";
+    conclusion.textContent = block.conclusion;
+    report.append(subject, facts, conclusion);
+    section.append(report);
+    return section;
+  }
+
   function renderHintsBlock(block) {
     const hints = document.createElement("div");
     hints.className = "hints";
@@ -411,6 +438,7 @@
     hints: renderHintsBlock,
     question: renderQuestionBlock,
     questions: renderQuestionsBlock,
+    report: renderReportBlock,
   };
 
   function renderBlocks(blocks, context) {
@@ -444,7 +472,7 @@
     setText(elements.eyebrow, chapter.eyebrow);
     setText(elements.title, chapter.title);
     setText(elements.date, chapter.date);
-    setText(elements.status, isComplete(chapter.id) ? "調査済" : chapter.status_label);
+    setText(elements.status, isComplete(chapter.id) ? (chapter.id === "finale" ? "報告完了" : "調査済") : chapter.status_label);
     setText(elements.objective, chapter.objective);
     setText(elements.lead, chapter.lead);
     setText(elements.pageNumber, `— ${String(chapterIndex + 1).padStart(2, "0")} —`);

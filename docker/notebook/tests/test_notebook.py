@@ -164,6 +164,27 @@ class ContentFileTest(unittest.TestCase):
             solved + ["ch4_handoff_schedule"],
         )
 
+    def test_finale_shows_report_and_call_without_repeating_questions(self):
+        locked = public_chapters({
+            "solved_question_ids": [],
+            "acknowledged_note_chapter_ids": [],
+            "unlocked_chapter_ids": ["prologue", "chapter-1", "chapter-2", "chapter-3", "chapter-4"],
+        })[5]
+        self.assertEqual(locked["blocks"], [])
+
+        open_finale = public_chapters({
+            "solved_question_ids": ["ch4_handoff_schedule"],
+            "acknowledged_note_chapter_ids": [],
+            "unlocked_chapter_ids": [
+                "prologue", "chapter-1", "chapter-2", "chapter-3", "chapter-4", "finale"
+            ],
+        })[5]
+        self.assertEqual([block["id"] for block in open_finale["blocks"]],
+                         ["completed-report", "final-call"])
+        self.assertEqual(questions_in(open_finale), [])
+        report = open_finale["blocks"][0]
+        self.assertIn("裏手の荷捌き所", "".join(item["value"] for item in report["items"]))
+
     def test_framework_documentation_routes_are_disabled(self):
         from app.main import app
 
@@ -819,6 +840,23 @@ class ProgressStoreTest(unittest.TestCase):
         progress = get_progress(CHAPTERS)
         self.assertEqual(progress["notes"]["prologue"]["content"], "依頼書を確認した。")
         self.assertIn("prologue", progress["acknowledged_note_chapter_ids"])
+
+    def test_finale_unlocks_after_chapter_four_final_answer(self):
+        for chapter in CHAPTERS[:5]:
+            for question_id in chapter["_question_ids"]:
+                if question_id == "ch4_handoff_schedule":
+                    continue
+                save_answer(question_id, "preview")
+
+        progress = get_progress(CHAPTERS)
+        self.assertNotIn("finale", progress["unlocked_chapter_ids"])
+        save_answer("ch4_handoff_schedule", "2026-09-11T01:00\t裏手の荷捌き所")
+
+        progress = get_progress(CHAPTERS)
+        self.assertIn("finale", progress["unlocked_chapter_ids"])
+        self.assertIn("finale", progress["completed_chapter_ids"])
+        self.assertIn("ch4_handoff_schedule", progress["solved_question_ids"])
+        self.assertEqual(progress["total_questions"], 18)
 
     def test_retired_question_answer_is_ignored(self):
         save_answer("retired_question", "old answer")
