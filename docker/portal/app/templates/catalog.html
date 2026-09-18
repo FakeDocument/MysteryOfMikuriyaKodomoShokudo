@@ -1,0 +1,10 @@
+{% extends "catalog_base.html" %}{% block content %}
+<section class="panel"><div class="panel-title">担当文書の照会</div><div class="panel-body">
+<p class="instruction">照会範囲：共通管理簿・本人の担当文書。空欄で照会範囲の全件を表示します。</p>
+<form class="search-form" method="post" action="/search"><label><span>キーワード</span><input name="keyword" value="{{ keyword }}" autocomplete="off"></label><button>検索実行</button></form>
+</div></section>
+<section class="panel results-panel"><div class="panel-title">検索結果　<span>{{ results|length }}件</span></div><div class="panel-body table-wrap"><table><thead><tr><th>件名</th><th>分類</th><th>管理担当</th></tr></thead><tbody>
+{% for row in results %}<tr><td><a href="/documents/{{ row.slug }}?{{ access_query }}">{{ row.title }}</a></td><td>{{ row.category }}</td><td>{{ row.owner }}</td></tr>
+{% else %}<tr><td colspan="3" class="empty">該当する文書はありません。</td></tr>{% endfor %}
+</tbody></table></div></section>
+{% endblock %}

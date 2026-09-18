@@ -60,18 +60,18 @@ services:
       start_period: 5s
     restart: unless-stopped
 
-  # 標的側: 政府サーバー(海域保全対策室 内部ポータル)
+  # 標的側: 政府サーバー(公開サイト + 文書目録検索)
   portal:
     build:
       context: ./docker/portal
     image: sushictf/portal:local
     container_name: sushictf-portal
-    hostname: portal-kaiiki-hozen
+    hostname: kaiiki-hozen
     networks:
       target-net:
         ipv4_address: 172.30.0.20
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost/"]
+      test: ["CMD-SHELL", "curl -fsS http://localhost/ >/dev/null && curl -fsS http://localhost:8080/ >/dev/null && smbcontrol smbd ping >/dev/null"]
       interval: 10s
       timeout: 3s
       retries: 10
@@ -91,7 +91,7 @@ services:
     extra_hosts:
       - "www.mikuriya-suisan.local:172.30.0.10"
       - "mail.mikuriya-suisan.local:172.30.0.10"
-      - "portal.kaiiki-hozen.local:172.30.0.20"
+      - "kaiiki-hozen.local:172.30.0.20"
     ports:
       - "127.0.0.1:6901:6901"
     shm_size: "1gb"

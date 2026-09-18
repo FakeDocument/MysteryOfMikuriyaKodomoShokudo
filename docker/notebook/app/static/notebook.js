@@ -299,7 +299,17 @@
     return [...tokens.slice(0, fieldCount - 1), tokens.slice(fieldCount - 1).join(" ")];
   }
 
-  function createAnswerInputs(question, savedAnswer, solved) {
+  function dateTimeInputValue(value, chapterDate) {
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) return value;
+    const match = value.match(/^(?:(\d{4})年)?(\d{1,2})月(\d{1,2})日\s*(?:午前|深夜)(\d{1,2})時$/);
+    if (!match) return "";
+    const year = match[1] || chapterDate.match(/^\d{4}/)?.[0];
+    if (!year) return "";
+    const pad = (part) => part.padStart(2, "0");
+    return `${year}-${pad(match[2])}-${pad(match[3])}T${pad(match[4])}:00`;
+  }
+
+  function createAnswerInputs(question, savedAnswer, solved, chapterDate) {
     if (!question.answer_fields) {
       return `
         <input
@@ -318,25 +328,31 @@
     }
 
     const values = savedAnswerParts(savedAnswer, question.answer_fields.length);
-    const fields = question.answer_fields.map((field, index) => `
+    const hasDateTime = question.answer_fields.some((field) => field.input_mode === "datetime");
+    const fields = question.answer_fields.map((field, index) => {
+      const isDateTime = field.input_mode === "datetime";
+      const value = isDateTime ? dateTimeInputValue(values[index] || "", chapterDate) : values[index] || "";
+      return `
       <label class="answer-field" for="answer-${question.id}-${field.id}">
         <span class="answer-field-label">${escapeHtml(field.label)}</span>
         <input
           id="answer-${question.id}-${field.id}"
           name="answer_${field.id}"
           data-answer-part
-          type="text"
-          value="${escapeAttribute(values[index] || "")}"
+          type="${isDateTime ? "datetime-local" : "text"}"
+          value="${escapeAttribute(value)}"
           placeholder="${escapeAttribute(field.placeholder)}"
           autocomplete="off"
           autocapitalize="off"
           spellcheck="false"
           ${field.input_mode === "numeric" ? 'inputmode="numeric"' : ""}
+          ${isDateTime ? 'step="60"' : ""}
           ${solved ? "disabled" : ""}
         >
       </label>
-    `).join("");
-    return `<div class="answer-fields" aria-label="回答欄">${fields}</div>`;
+    `;
+    }).join("");
+    return `<div class="answer-fields${hasDateTime ? " has-datetime" : ""}" aria-label="回答欄">${fields}</div>`;
   }
 
   function renderQuestionBlock(question, context, index) {
@@ -358,7 +374,7 @@
       ${prompt}
       <div class="answer-row">
         <span class="pencil-mark" aria-hidden="true">✎</span>
-        ${createAnswerInputs(question, savedAnswer, solved)}
+        ${createAnswerInputs(question, savedAnswer, solved, context.chapter.date)}
         <button class="ink-button" type="submit" ${solved ? "disabled" : ""}>
           ${solved ? "記録済み" : "照合する"}
         </button>

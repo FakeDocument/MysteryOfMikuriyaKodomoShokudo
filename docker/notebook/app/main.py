@@ -1,5 +1,6 @@
 """九十九探偵事務所の調査ノートUI。"""
 
+import hashlib
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
@@ -15,6 +16,9 @@ from .store import get_progress, initialize_database, save_answer, save_note
 
 
 APP_DIR = Path(__file__).parent
+ASSET_VERSION = hashlib.sha256(
+    b"".join((APP_DIR / "static" / filename).read_bytes() for filename in ("notebook.css", "notebook.js"))
+).hexdigest()[:12]
 
 
 @asynccontextmanager
@@ -50,14 +54,17 @@ def healthz() -> dict[str, str]:
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request) -> HTMLResponse:
     current_progress = get_progress(CHAPTERS)
-    return templates.TemplateResponse(
+    response = templates.TemplateResponse(
         request,
         "index.html",
         {
             "chapters": public_chapters(current_progress),
             "progress": current_progress,
+            "asset_version": ASSET_VERSION,
         },
     )
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.get("/api/progress")

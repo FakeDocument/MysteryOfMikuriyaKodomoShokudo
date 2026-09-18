@@ -7,8 +7,8 @@
     "title": "海域保全対策室",
     "date": "2026年9月10日 18時00分",
     "eyebrow": "CHAPTER 04 / GOVERNMENT SITE",
-    "status_label": "未開封",
-    "available": false,
+    "status_label": "単独調査",
+    "available": true,
     "objective": "片柳の業務メールアドレスから特定したドメインを足掛かりに、海域保全対策室のサイトを調べる。",
     "lead": "片柳のメールアドレスに残されたドメインを、次の入口として調べる。",
     "blocks": [
@@ -39,7 +39,7 @@
           },
           {
             "speaker": "player",
-            "text": "でも、僕1人でハッキングなんて無理ですよ！"
+            "text": "でも、1人でハッキングなんて無理ですよ！"
           },
           {
             "speaker": "director",
@@ -56,6 +56,315 @@
           {
             "speaker": "player",
             "text": "…………分かりました。でも、無茶だけはしないでくださいね。"
+          }
+        ]
+      },
+      {
+        "type": "evidence_note",
+        "id": "evidence-note",
+        "heading": {
+          "number": "02",
+          "kicker": "EVIDENCE MEMO",
+          "title": "見つけた証拠"
+        },
+        "label": "入口で見つけた設定と、取得した資料の食い違いを控える",
+        "placeholder": "開いていたサービス、見つけた共有、取得したファイル、記録を照合して分かったこと……",
+        "action_label": "証拠を貼り込む"
+      },
+      {
+        "type": "questions",
+        "id": "service-investigation",
+        "heading": {
+          "number": "03",
+          "kicker": "INVESTIGATION",
+          "title": "入口を調べる"
+        },
+        "items": [
+          {
+            "type": "question",
+            "id": "ch4_services",
+            "label": "調査 01",
+            "prompt": "海域保全対策室のホストを調べ、2つのWebサービスとファイル共有サービスのポート番号を記録してください。",
+            "answer_fields": [
+              {
+                "id": "public_port",
+                "label": "公開サイト",
+                "placeholder": "ポート番号",
+                "input_mode": "numeric"
+              },
+              {
+                "id": "catalog_port",
+                "label": "もう一つのWebサイト",
+                "placeholder": "ポート番号",
+                "input_mode": "numeric"
+              },
+              {
+                "id": "file_port",
+                "label": "ファイル共有",
+                "placeholder": "ポート番号",
+                "input_mode": "numeric"
+              }
+            ],
+            "blocks": [
+              {
+                "type": "hints",
+                "id": "hints",
+                "items": [
+                  "第1章で、ホストに開いているサービスを調べたページを見返す。",
+                  "第3章で特定したドメインにも、同じ調査方法を使える。"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "questions",
+        "id": "catalog-access-investigation",
+        "visible_when": {
+          "event": "questions_solved",
+          "question_ids": [
+            "ch4_services"
+          ]
+        },
+        "heading": {
+          "number": "04",
+          "kicker": "INVESTIGATION",
+          "title": "もう一つの入口"
+        },
+        "items": [
+          {
+            "type": "question",
+            "id": "ch4_catalog_entry",
+            "label": "調査 02",
+            "prompt": "445番のファイル共有を調べ、文書目録に入るための閲覧コードを記録してください。まだログイン情報がなくても、共有一覧を確認できるでしょうか。",
+            "placeholder": "閲覧コード",
+            "input_mode": "latin",
+            "blocks": [
+              {
+                "type": "hints",
+                "id": "hints",
+                "items": [
+                  "第2章で使った共有一覧の確認方法を見返す。今回はIDやパスワードを指定せずに試せる。",
+                  "`smbclient -L //kaiiki-hozen.local -N` で共有を列挙できる。`-N` はパスワードを尋ねずに接続する指定。Sharenameの一覧が出ていれば成功。",
+                  "引継用の共有は `smbclient //kaiiki-hozen.local/handover -N` で開ける。READMEと端末設定票を読む。"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "questions",
+        "id": "anomaly-investigation",
+        "visible_when": {
+          "event": "questions_solved",
+          "question_ids": [
+            "ch4_catalog_entry"
+          ]
+        },
+        "heading": {
+          "number": "05",
+          "kicker": "INVESTIGATION",
+          "title": "担当範囲の向こう側"
+        },
+        "items": [
+          {
+            "type": "question",
+            "id": "ch4_anomaly",
+            "label": "調査 03",
+            "prompt": "入手した閲覧コードで8080番の文書目録に入り、通常の照会範囲にない記録を調べてください。観測記録と古い伝承を照合し、そこに現れる存在の統一名称と、島が消える現象の呼び名を記録してください。",
+            "answer_fields": [
+              {
+                "id": "name",
+                "label": "当室での統一名称",
+                "placeholder": "○○様",
+                "input_mode": "text"
+              },
+              {
+                "id": "nature",
+                "label": "島が消える伝承の呼び名",
+                "placeholder": "資料を照合して記録",
+                "input_mode": "text"
+              }
+            ],
+            "blocks": [
+              {
+                "type": "hints",
+                "id": "hints",
+                "items": [
+                  "目録にコードを入力したら、最初に表示される照会範囲を確認する。探している記録が見えない理由は何だろう。",
+                  "第3章で、自分以外のメールを見つけた検索欄の使い方を見返す。目録にも検索欄がある。",
+                  "第1章で使った方法で公開サイトの旧資料も探せる。観測点と管理番号を照合して記録を絞り、岩礁が消えた記録と伝承の共通点を確かめる。"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "questions",
+        "id": "conservation-investigation",
+        "visible_when": {
+          "event": "questions_solved",
+          "question_ids": [
+            "ch4_anomaly"
+          ]
+        },
+        "heading": {
+          "number": "06",
+          "kicker": "INVESTIGATION",
+          "title": "守ろうとしているもの"
+        },
+        "items": [
+          {
+            "type": "question",
+            "id": "ch4_conservation_target",
+            "label": "調査 04",
+            "prompt": "観測記録と実施要領を、公開サイトの観測点一覧と照合してください。政府が守ろうとしている島と、維持しようとしている海域はどこですか。",
+            "answer_fields": [
+              {
+                "id": "island",
+                "label": "守ろうとしている島",
+                "placeholder": "○○島",
+                "input_mode": "text"
+              },
+              {
+                "id": "waters",
+                "label": "維持しようとしている海域",
+                "placeholder": "略称または正式名称",
+                "input_mode": "text"
+              }
+            ],
+            "blocks": [
+              {
+                "type": "hints",
+                "id": "hints",
+                "items": [
+                  "目録の実施要領には観測点と、島礁が消失した場合に維持できなくなるものが書かれている。",
+                  "公開サイトの観測点一覧で、同じ観測点がどの島の周辺にあるか確かめる。"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "questions",
+        "id": "file-investigation",
+        "visible_when": {
+          "event": "questions_solved",
+          "question_ids": [
+            "ch4_conservation_target"
+          ]
+        },
+        "heading": {
+          "number": "07",
+          "kicker": "INVESTIGATION",
+          "title": "原簿のある場所へ"
+        },
+        "items": [
+          {
+            "type": "question",
+            "id": "ch4_file_share",
+            "label": "調査 05",
+            "prompt": "文書システムで得た情報を使い、政府側のファイル共有へ接続して原簿を取得してください。接続できた共有名と、9月分の受入照合簿に記載された受入番号を記録してください。",
+            "answer_fields": [
+              {
+                "id": "share",
+                "label": "共有名",
+                "placeholder": "共有名",
+                "input_mode": "latin"
+              },
+              {
+                "id": "intake_number",
+                "label": "受入番号",
+                "placeholder": "受入番号",
+                "input_mode": "latin"
+              }
+            ],
+            "blocks": [
+              {
+                "type": "hints",
+                "id": "hints",
+                "items": [
+                  "第2章で、別のサービスにログインして資料を取得したページを見返す。",
+                  "目録には保守担当者が残した記録もある。接続設定を最初のポート調査と照合し、共有内の受入照合簿を読む。"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "questions",
+        "id": "handoff-investigation",
+        "visible_when": {
+          "event": "questions_solved",
+          "question_ids": [
+            "ch4_file_share"
+          ]
+        },
+        "heading": {
+          "number": "08",
+          "kicker": "INVESTIGATION",
+          "title": "持ち出した原簿をつなぐ"
+        },
+        "items": [
+          {
+            "type": "question",
+            "id": "ch4_handoff_schedule",
+            "label": "調査 06",
+            "prompt": "第3章の御厨の連絡と受入照合簿を照合し、この原簿が笑真の引き渡しを扱うと確かめてください。確定配車表で予定日時と使用する入場口を確認し、受入口登録簿にあるその名称を記録してください。",
+            "answer_fields": [
+              {
+                "id": "handoff_time",
+                "label": "引き渡し予定日時",
+                "placeholder": "日付と時刻を選択",
+                "input_mode": "datetime"
+              },
+              {
+                "id": "handoff_place",
+                "label": "引き渡し場所（受入口名）",
+                "placeholder": "受入口登録簿にある名称",
+                "input_mode": "text"
+              }
+            ],
+            "blocks": [
+              {
+                "type": "hints",
+                "id": "hints",
+                "items": [
+                  "第3章の連絡と受入照合簿で、協力者・確保日・年齢を比べる。帳票に氏名がなくても同じ子どもか判断できる。",
+                  "配車表では取消行と確定行を区別し、業務日25時を翌日の時刻として読む。入場口の記号は別の登録簿で確認する。"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "dialogue",
+        "id": "chapter-close",
+        "visible_when": {
+          "event": "questions_solved",
+          "question_ids": [
+            "ch4_handoff_schedule"
+          ]
+        },
+        "heading": {
+          "number": "09",
+          "kicker": "CONVERSATION LOG",
+          "title": "残された時刻"
+        },
+        "messages": [
+          {
+            "speaker": "player",
+            "text": "食堂の記録と、この「提供」は、同じ子どもの話だったんだ。"
+          },
+          {
+            "speaker": "player",
+            "text": "9月11日、午前1時。……今夜だ。裏の荷捌き所に来る。"
           }
         ]
       }

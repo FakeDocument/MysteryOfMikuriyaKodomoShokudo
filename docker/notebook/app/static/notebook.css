@@ -1046,6 +1046,10 @@ textarea:focus-visible {
   min-width: 0;
 }
 
+.answer-fields.has-datetime {
+  grid-template-columns: minmax(220px, 1fr) minmax(180px, 1fr);
+}
+
 .answer-field {
   display: grid;
   min-width: 0;
@@ -1322,7 +1326,8 @@ code {
     justify-self: end;
   }
 
-  .answer-fields {
+  .answer-fields,
+  .answer-fields.has-datetime {
     grid-template-columns: 1fr;
     gap: 10px;
   }

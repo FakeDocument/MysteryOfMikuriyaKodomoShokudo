@@ -6,11 +6,11 @@
   <meta name="theme-color" content="#18362f">
   <meta name="description" content="九十九探偵事務所の事件調査ノート">
   <title>九十九探偵事務所｜調査ノート</title>
-  <link rel="stylesheet" href="{{ url_for('static', path='/notebook.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', path='/notebook.css') }}?v={{ asset_version }}">
   <script>
     window.NOTEBOOK_DATA = {{ {"chapters": chapters, "progress": progress} | tojson }};
   </script>
-  <script src="{{ url_for('static', path='/notebook.js') }}" defer></script>
+  <script src="{{ url_for('static', path='/notebook.js') }}?v={{ asset_version }}" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#notebook-page">調査ノート本文へ移動</a>

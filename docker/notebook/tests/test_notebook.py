@@ -33,6 +33,25 @@ def questions_in(chapter):
 
 
 class AnswerValidationTest(unittest.TestCase):
+    def test_chapter_four_answers_follow_discovered_evidence(self):
+        self.assertTrue(validate_answer(QUESTIONS_BY_ID["ch4_services"], "80\t8080\t445"))
+        self.assertTrue(validate_answer(QUESTIONS_BY_ID["ch4_catalog_entry"], "E6N4-P9R2-T3M5"))
+        self.assertFalse(validate_answer(QUESTIONS_BY_ID["ch4_catalog_entry"], "連絡調整係／9月連絡業務"))
+        self.assertFalse(validate_answer(QUESTIONS_BY_ID["ch4_catalog_entry"], "E6N4-P9R2-T3M5\t連絡調整係／9月連絡業務"))
+        self.assertTrue(validate_answer(QUESTIONS_BY_ID["ch4_anomaly"], "オオクチ様\t島食い"))
+        self.assertFalse(validate_answer(QUESTIONS_BY_ID["ch4_anomaly"], "オオクチ様\t人身御供"))
+        self.assertFalse(validate_answer(QUESTIONS_BY_ID["ch4_catalog_entry"], "katayanagi\tKatayanagi2021"))
+        self.assertTrue(validate_answer(QUESTIONS_BY_ID["ch4_conservation_target"], "沖ノ鳥島\tEEZ"))
+        self.assertFalse(validate_answer(QUESTIONS_BY_ID["ch4_conservation_target"], "沖ノ鳥島\tEEZ\t2026年9月11日 深夜1時"))
+        self.assertTrue(validate_answer(QUESTIONS_BY_ID["ch4_file_share"], "handoff\tR-14"))
+        self.assertFalse(validate_answer(QUESTIONS_BY_ID["ch4_file_share"], "handoff\thozen_sync"))
+        final_evidence = QUESTIONS_BY_ID["ch4_handoff_schedule"]
+        self.assertEqual(final_evidence["answer_fields"][0]["input_mode"], "datetime")
+        self.assertTrue(validate_answer(final_evidence, "2026-09-11T01:00\t裏手の荷捌き所"))
+        self.assertFalse(validate_answer(final_evidence, "2026-09-11T01:00\t御厨水産 裏手の荷捌き所"))
+        self.assertFalse(validate_answer(final_evidence, "2026年9月11日 深夜1時\t裏手の荷捌き所"))
+        self.assertFalse(validate_answer(final_evidence, "沖ノ鳥島\tEEZ"))
+
     def test_japanese_name_accepts_spacing_and_kana(self):
         question = QUESTIONS_BY_ID["prologue_requester"]
         self.assertTrue(validate_answer(question, " 遠藤　美咲 "))
@@ -106,9 +125,56 @@ class AnswerValidationTest(unittest.TestCase):
 
 
 class ContentFileTest(unittest.TestCase):
+    def test_chapter_four_allows_catalog_after_port_scan(self):
+        def chapter_four_with(solved_question_ids):
+            progress = {
+                "solved_question_ids": solved_question_ids,
+                "acknowledged_note_chapter_ids": [],
+                "unlocked_chapter_ids": [
+                    "prologue", "chapter-1", "chapter-2", "chapter-3", "chapter-4"
+                ],
+            }
+            return public_chapters(progress)[4]
+
+        self.assertEqual(
+            [question["id"] for question in questions_in(chapter_four_with([]))],
+            ["ch4_services"],
+        )
+        self.assertEqual(
+            [question["id"] for question in questions_in(chapter_four_with(["ch4_services"]))],
+            ["ch4_services", "ch4_catalog_entry"],
+        )
+        catalog_question = questions_in(chapter_four_with(["ch4_services"]))[1]
+        self.assertNotIn("answer_fields", catalog_question)
+        self.assertIn("共有一覧", catalog_question["prompt"])
+        self.assertIn("-N", "".join(catalog_question["blocks"][0]["items"]))
+        solved = ["ch4_services", "ch4_catalog_entry", "ch4_anomaly"]
+        self.assertEqual(
+            [question["id"] for question in questions_in(chapter_four_with(solved))],
+            solved + ["ch4_conservation_target"],
+        )
+        solved.append("ch4_conservation_target")
+        self.assertEqual(
+            [question["id"] for question in questions_in(chapter_four_with(solved))],
+            solved + ["ch4_file_share"],
+        )
+        solved.append("ch4_file_share")
+        self.assertEqual(
+            [question["id"] for question in questions_in(chapter_four_with(solved))],
+            solved + ["ch4_handoff_schedule"],
+        )
+
+    def test_framework_documentation_routes_are_disabled(self):
+        from app.main import app
+
+        paths = {route.path for route in app.routes}
+        self.assertNotIn("/docs", paths)
+        self.assertNotIn("/redoc", paths)
+        self.assertNotIn("/openapi.json", paths)
+
     def test_manifest_splits_one_chapter_per_file(self):
         manifest = json.loads(CHAPTERS_MANIFEST_PATH.read_text(encoding="utf-8"))
-        self.assertEqual(len(manifest["chapter_files"]), 7)
+        self.assertEqual(len(manifest["chapter_files"]), 6)
         chapter_ids = []
         for filename in manifest["chapter_files"]:
             data = json.loads((CHAPTERS_MANIFEST_PATH.parent / filename).read_text(encoding="utf-8"))

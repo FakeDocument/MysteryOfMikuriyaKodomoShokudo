@@ -1,0 +1,9 @@
+{% extends "catalog_base.html" %}{% block content %}
+<section class="panel login-panel"><div class="panel-title">文書目録／端末引継</div><div class="panel-body">
+<p>庁内文書管理DBの閲覧端末を移設する場合は、引継用の閲覧コードを入力してください。</p>
+{% if error %}<p class="system-message" role="alert">{{ error }}</p>{% endif %}
+<form class="login-form" method="post" action="/login">
+<label><span>閲覧コード</span><input name="code" autocomplete="off" required></label>
+<button>閲覧を開始</button></form>
+<p class="instruction">端末の移設・設定に関する照会は情報管理係へ。</p>
+</div></section>{% endblock %}

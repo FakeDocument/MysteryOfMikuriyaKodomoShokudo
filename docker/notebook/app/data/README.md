@@ -14,7 +14,6 @@ chapters/
 ├── chapter-2.json
 ├── chapter-3.json
 ├── chapter-4.json
-├── chapter-5.json
 └── finale.json
 ```
 

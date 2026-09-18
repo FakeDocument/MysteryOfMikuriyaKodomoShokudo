@@ -89,6 +89,40 @@
       "accepted": [
         "kaiiki-hozen.local"
       ]
+    },
+    "ch4_anomaly": {
+      "accepted": [
+        "オオクチ様\t島食い",
+        "オオクチ\t島食い"
+      ]
+    },
+    "ch4_conservation_target": {
+      "accepted": [
+        "沖ノ鳥島\tEEZ",
+        "沖ノ鳥島\t排他的経済水域"
+      ]
+    },
+    "ch4_handoff_schedule": {
+      "accepted": [
+        "2026-09-11T01:00\t裏手の荷捌き所"
+      ],
+      "validation": "exact"
+    },
+    "ch4_services": {
+      "accepted": [
+        "80\t8080\t445"
+      ],
+      "validation": "exact"
+    },
+    "ch4_catalog_entry": {
+      "accepted": [
+        "E6N4-P9R2-T3M5"
+      ]
+    },
+    "ch4_file_share": {
+      "accepted": [
+        "handoff\tR-14"
+      ]
     }
   }
 }

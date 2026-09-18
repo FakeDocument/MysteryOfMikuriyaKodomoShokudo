@@ -1,0 +1,18 @@
+:root { color-scheme: light; font-family: "Noto Sans CJK JP", "Yu Gothic", sans-serif; color: #172331; background: #eef1f4; }
+* { box-sizing: border-box; } body { margin: 0; }
+header { background: #163c63; color: white; border-top: 6px solid #9b2c2c; }
+.header-inner, main, footer { max-width: 1040px; margin: auto; }
+.header-inner { padding: 22px 24px; } .agency { margin: 0 0 4px; font-size: .78rem; letter-spacing: .12em; }
+h1 { margin: 0; font-size: 1.65rem; font-weight: 500; } nav { background: #fff; border-bottom: 1px solid #ccd3da; }
+nav div { max-width: 1040px; margin: auto; padding: 0 24px; } nav a { display: inline-block; padding: 13px 24px 12px 0; color: #173f68; font-weight: 600; }
+main { min-height: 580px; padding: 34px 24px 60px; background: white; } .breadcrumb { color: #5c6875; font-size: .86rem; }
+h2 { border-left: 7px solid #9b2c2c; padding: 8px 14px; border-bottom: 1px solid #aeb8c2; font-size: 1.45rem; }
+h3 { color: #173f68; border-bottom: 2px solid #c8d3df; padding-bottom: 8px; } p, li { line-height: 1.85; }
+.notice { border: 1px solid #b8c4d0; background: #f4f7fa; padding: 16px 20px; }
+.search-form { background: #edf2f6; border: 1px solid #bac6d1; padding: 18px; display: grid; grid-template-columns: 1fr 210px auto; gap: 12px; align-items: end; }
+label { font-size: .85rem; font-weight: 600; } input, select, button { width: 100%; margin-top: 5px; padding: 9px; font: inherit; }
+button { background: #174c78; color: white; border: 0; cursor: pointer; } table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+th, td { border: 1px solid #b8c1ca; padding: 10px; text-align: left; vertical-align: top; } th { background: #dfe8ef; }
+.restricted { color: #8a1f1f; font-weight: 700; } .document { border: 1px solid #9daab5; padding: 26px 34px; box-shadow: 0 2px 7px #0002; }
+.document pre { white-space: pre-wrap; font: inherit; line-height: 1.9; } footer { padding: 20px 24px; color: #687582; font-size: .78rem; }
+@media (max-width: 720px) { .search-form { grid-template-columns: 1fr; } main { padding: 22px 14px; } }
