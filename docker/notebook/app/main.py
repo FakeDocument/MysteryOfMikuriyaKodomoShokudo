@@ -17,7 +17,10 @@ from .store import get_progress, initialize_database, save_answer, save_note
 
 APP_DIR = Path(__file__).parent
 ASSET_VERSION = hashlib.sha256(
-    b"".join((APP_DIR / "static" / filename).read_bytes() for filename in ("notebook.css", "notebook.js"))
+    b"".join(
+        (APP_DIR / "static" / filename).read_bytes()
+        for filename in ("notebook.css", "markdown.js", "notebook.js")
+    )
 ).hexdigest()[:12]
 
 

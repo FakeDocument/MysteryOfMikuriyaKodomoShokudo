@@ -46,6 +46,14 @@
     element.textContent = value || "";
   }
 
+  function setMarkdown(element, value) {
+    element.innerHTML = window.NotebookMarkdown.render(value);
+  }
+
+  function setInlineMarkdown(element, value) {
+    element.innerHTML = window.NotebookMarkdown.renderInline(value || "");
+  }
+
   function renderNavigation() {
     elements.tabs.replaceChildren();
     state.chapters.forEach((chapter) => {
@@ -103,9 +111,11 @@
       </div>
       <div class="dialogue-body">
         <span class="speaker-name">${speakerName}</span>
-        <p>${escapeHtml(entry.text)}</p>
+        <div class="dialogue-copy"></div>
       </div>
     `;
+    const copy = row.querySelector(".dialogue-copy");
+    setMarkdown(copy, entry.text);
     if (entry.link) {
       const link = document.createElement("a");
       link.className = "dialogue-link";
@@ -113,7 +123,7 @@
       link.target = "_blank";
       link.rel = "noopener noreferrer";
       link.textContent = entry.link.label;
-      row.querySelector(".dialogue-body p").append(link);
+      copy.append(link);
     }
     if (entry.image) {
       const figure = document.createElement("figure");
@@ -211,8 +221,9 @@
     const body = document.createElement("div");
     body.className = "document-body";
     documentData.body.forEach((paragraph, index) => {
-      const paragraphElement = document.createElement("p");
-      paragraphElement.textContent = paragraph;
+      const paragraphElement = document.createElement("div");
+      paragraphElement.className = "document-paragraph";
+      setMarkdown(paragraphElement, paragraph);
       if (index === 0 || index === documentData.body.length - 1) {
         paragraphElement.classList.add("letter-emphasis");
       }
@@ -253,6 +264,28 @@
     textarea.placeholder = block.placeholder;
     textarea.value = state.progress.notes[context.chapter.id]?.content || "";
 
+    const guide = document.createElement("p");
+    guide.className = "markdown-guide";
+    guide.innerHTML = "Markdown対応：<code>**太字**</code> / <code>```コードブロック```</code>";
+    const previewLabel = document.createElement("p");
+    previewLabel.className = "markdown-preview-label";
+    previewLabel.textContent = "プレビュー";
+    const preview = document.createElement("div");
+    preview.className = "markdown-preview";
+    preview.dataset.role = "note-preview";
+    preview.setAttribute("aria-live", "polite");
+
+    const updatePreview = () => {
+      const content = textarea.value;
+      preview.classList.toggle("is-empty", !content.trim());
+      if (content.trim()) {
+        setMarkdown(preview, content);
+      } else {
+        preview.textContent = "入力したメモの表示をここで確認できます。";
+      }
+    };
+    updatePreview();
+
     const actions = document.createElement("div");
     actions.className = "evidence-actions";
     const status = document.createElement("span");
@@ -265,9 +298,12 @@
     button.type = "button";
     button.textContent = block.action_label;
     button.addEventListener("click", submitNote);
-    textarea.addEventListener("input", () => setText(status, "編集中…"));
+    textarea.addEventListener("input", () => {
+      setText(status, "編集中…");
+      updatePreview();
+    });
     actions.append(status, button);
-    card.append(label, textarea, actions);
+    card.append(label, textarea, guide, previewLabel, preview, actions);
     section.append(card);
     return section;
   }
@@ -293,7 +329,7 @@
     });
     const conclusion = document.createElement("p");
     conclusion.className = "report-conclusion";
-    conclusion.textContent = block.conclusion;
+    setInlineMarkdown(conclusion, block.conclusion);
     report.append(subject, facts, conclusion);
     section.append(report);
     return section;
@@ -307,7 +343,7 @@
       details.className = "hint-note";
       details.innerHTML = `
         <summary>所長の付箋 ${index + 1}</summary>
-        <p>${formatInlineCode(hint)}</p>
+        <div class="hint-copy">${window.NotebookMarkdown.render(hint)}</div>
       `;
       hints.append(details);
     });
@@ -391,8 +427,8 @@
     form.style.setProperty("--question-index", index);
     const promptId = `question-prompt-${question.id}`;
     const prompt = question.answer_fields
-      ? `<p class="question-prompt" id="${promptId}">${escapeHtml(question.prompt)}</p>`
-      : `<label for="answer-${question.id}">${escapeHtml(question.prompt)}</label>`;
+      ? `<p class="question-prompt" id="${promptId}">${window.NotebookMarkdown.renderInline(question.prompt)}</p>`
+      : `<label for="answer-${question.id}">${window.NotebookMarkdown.renderInline(question.prompt)}</label>`;
     form.innerHTML = `
       <div class="question-topline">
         <span>${escapeHtml(question.label)}</span>
@@ -473,8 +509,8 @@
     setText(elements.title, chapter.title);
     setText(elements.date, chapter.date);
     setText(elements.status, isComplete(chapter.id) ? (chapter.id === "finale" ? "報告完了" : "調査済") : chapter.status_label);
-    setText(elements.objective, chapter.objective);
-    setText(elements.lead, chapter.lead);
+    setInlineMarkdown(elements.objective, chapter.objective);
+    setInlineMarkdown(elements.lead, chapter.lead);
     setText(elements.pageNumber, `— ${String(chapterIndex + 1).padStart(2, "0")} —`);
     elements.blocks.replaceChildren();
     renderBlocks(chapter.blocks, renderContext);
@@ -611,10 +647,6 @@
       "'": "&#39;",
       "`": "&#96;",
     })[character]);
-  }
-
-  function formatInlineCode(value) {
-    return escapeHtml(value).replace(/`([^`]+)`/g, "<code>$1</code>");
   }
 
   state.activeChapterId = firstCurrentChapter().id;

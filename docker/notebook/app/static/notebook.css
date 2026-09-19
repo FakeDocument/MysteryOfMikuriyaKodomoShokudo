@@ -592,13 +592,21 @@ textarea:focus-visible {
   z-index: 1;
 }
 
-.document-body p {
+.document-paragraph {
   margin: 0 0 17px;
   font-family: "Klee", "Hiragino Maru Gothic ProN", "Yu Gothic", sans-serif;
   font-size: clamp(14px, 1.7vw, 16px);
   font-weight: 500;
   letter-spacing: 0.045em;
   line-height: 2;
+}
+
+.document-paragraph > :first-child {
+  margin-top: 0;
+}
+
+.document-paragraph > :last-child {
+  margin-bottom: 0;
 }
 
 .document-body .letter-emphasis {
@@ -750,9 +758,8 @@ textarea:focus-visible {
   color: var(--blue);
 }
 
-.dialogue-body p {
+.dialogue-copy {
   position: relative;
-  margin: 0;
   padding: 14px 17px;
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid rgba(36, 58, 51, 0.32);
@@ -763,7 +770,7 @@ textarea:focus-visible {
   line-height: 1.9;
 }
 
-.dialogue-body p::before {
+.dialogue-copy::before {
   position: absolute;
   top: 13px;
   left: -8px;
@@ -774,6 +781,18 @@ textarea:focus-visible {
   border-left: 1px solid rgba(36, 58, 51, 0.32);
   content: "";
   transform: rotate(45deg);
+}
+
+.dialogue-copy > :first-child {
+  margin-top: 0;
+}
+
+.dialogue-copy > :last-child {
+  margin-bottom: 0;
+}
+
+.dialogue-copy p {
+  margin: 0 0 0.8em;
 }
 
 .dialogue-link {
@@ -838,13 +857,13 @@ textarea:focus-visible {
   line-height: 1.6;
 }
 
-.is-player .dialogue-body p {
+.is-player .dialogue-copy {
   background: #eef4f5;
   border-color: rgba(46, 88, 111, 0.34);
   border-radius: 13px 4px 13px 13px;
 }
 
-.is-player .dialogue-body p::before {
+.is-player .dialogue-copy::before {
   right: -8px;
   left: auto;
   background: #eef4f5;
@@ -899,6 +918,101 @@ textarea:focus-visible {
 
 .evidence-card textarea::placeholder {
   color: rgba(73, 71, 55, 0.45);
+}
+
+.markdown-guide {
+  margin: 7px 4px 14px;
+  color: rgba(73, 71, 55, 0.72);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.markdown-guide code {
+  padding: 1px 4px;
+  background: rgba(255, 255, 255, 0.42);
+  border-radius: 2px;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+}
+
+.markdown-preview-label {
+  margin: 0 4px 6px;
+  color: #655b37;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.markdown-preview {
+  min-height: 48px;
+  padding: 12px 14px;
+  overflow-wrap: anywhere;
+  background: rgba(255, 255, 255, 0.56);
+  border: 1px dashed rgba(101, 91, 55, 0.38);
+  border-radius: 3px;
+  color: #24342e;
+  font-family: var(--font-serif);
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.markdown-preview.is-empty {
+  color: rgba(73, 71, 55, 0.5);
+  font-size: 12px;
+}
+
+.markdown-preview > :first-child {
+  margin-top: 0;
+}
+
+.markdown-preview > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-preview p {
+  margin: 0 0 0.75em;
+}
+
+.dialogue-copy code,
+.document-paragraph code,
+.hint-copy code,
+.markdown-preview code,
+.question-prompt code,
+.question-card > label code,
+.report-conclusion code,
+.case-brief code {
+  padding: 0.08em 0.32em;
+  background: rgba(22, 40, 35, 0.1);
+  border-radius: 3px;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 0.9em;
+}
+
+.dialogue-copy pre,
+.document-paragraph pre,
+.hint-copy pre,
+.markdown-preview pre {
+  margin: 0.8em 0;
+  padding: 11px 13px;
+  overflow-x: auto;
+  color: #f4f1e8;
+  background: #1d302b;
+  border: 1px solid rgba(0, 0, 0, 0.28);
+  border-radius: 4px;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 0.86em;
+  font-weight: 400;
+  line-height: 1.65;
+  white-space: pre;
+}
+
+.dialogue-copy pre code,
+.document-paragraph pre code,
+.hint-copy pre code,
+.markdown-preview pre code {
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
 }
 
 .evidence-actions {
@@ -1148,11 +1262,14 @@ textarea:focus-visible {
   cursor: pointer;
 }
 
-.hint-note p {
-  margin: 0;
+.hint-copy {
   padding: 0 10px 10px;
   font-size: 11px;
   line-height: 1.8;
+}
+
+.hint-copy p {
+  margin: 0;
 }
 
 code {
@@ -1359,7 +1476,7 @@ code {
     flex-basis: 46px;
   }
 
-  .dialogue-body p {
+  .dialogue-copy {
     padding: 11px 13px;
     font-size: 13px;
     line-height: 1.8;

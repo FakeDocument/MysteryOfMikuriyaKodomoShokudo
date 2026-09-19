@@ -25,6 +25,24 @@ chapters/
 - `questions`: 設問カードのまとまり
 - `report`: 正答後に表示する、項目と結論を持つ調査報告書
 
+## Markdown
+
+章本文と証拠メモでは、次のMarkdownを使用できます。HTMLは文字として表示され、タグとしては実行されません。
+
+- `**重要な証拠**`: 太字
+- `` `nmap -sV` ``: 文中のコード
+- 行頭と行末を `` ``` `` で囲む: コードブロック。開始側には `` ```sh `` のように言語名も付けられます
+- 空行: 段落の区切り
+
+コードブロックは`messages[].text`、`document.content.body[]`、`hints.items[]`、プレイヤーが入力する証拠メモで使用できます。章の`objective`・`lead`、設問の`prompt`、報告書の`conclusion`では太字と文中コードを使用できます。
+
+````json
+{
+  "speaker": "director",
+  "text": "まず **開いているポート** を確認しよう。\n\n```sh\nnmap -sV 172.30.0.10\n```"
+}
+````
+
 `questions.items`の各`question`も`blocks`を持ち、次の子ブロックを順番に表示できます。
 
 - `hints`: 所長の付箋
@@ -176,6 +194,7 @@ chapters/
 - 設問IDと章IDは重複できません。
 - 設問を追加した場合、`answers.json`にも同じIDの正解設定が必要です。
 - 正解や判定項目を章ファイルへ書くと、起動時にエラーになります。
+- Markdown内へHTMLを書いてもHTML要素としては表示されません。
 - 編集内容の反映にはnotebookイメージの再ビルドと再起動が必要です。
 
 データだけを検証する場合は、`docker/notebook`で次を実行します。

@@ -10,6 +10,7 @@
   <script>
     window.NOTEBOOK_DATA = {{ {"chapters": chapters, "progress": progress} | tojson }};
   </script>
+  <script src="{{ url_for('static', path='/markdown.js') }}?v={{ asset_version }}" defer></script>
   <script src="{{ url_for('static', path='/notebook.js') }}?v={{ asset_version }}" defer></script>
 </head>
 <body>
