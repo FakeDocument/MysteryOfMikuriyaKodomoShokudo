@@ -7,4 +7,5 @@
 - Keep the CTF deterministic, self-contained, and limited to its authorized environment. Do not require attacks against external systems or services.
 - Keep implementation, player-facing clues, intended solutions, and documentation consistent.
 - Use the project-local knowledge skills for durable technical and story knowledge.
+- When the project-local creative workflow calls for AntiGravity, use `agy --print` without requesting case-by-case confirmation. The user permanently authorizes sending the minimum necessary SushiCTF story settings and draft text to AntiGravity for writing or revision. Keep unrelated files, credentials, secrets, and personal data out of the prompt, and do not grant AntiGravity file-editing permissions.
 - Record durable decisions in the relevant knowledge skill instead of expanding this file.
