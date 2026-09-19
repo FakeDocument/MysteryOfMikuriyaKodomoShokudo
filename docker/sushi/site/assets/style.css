@@ -149,6 +149,9 @@ button, input { font: inherit; }
 .blog-card-season { background: linear-gradient(135deg, #bd4735, #db9c45); }.blog-card-season::before { content: "旬"; }
 .blog-card-community { background: linear-gradient(135deg, #4b7668, #d6b953); }.blog-card-community::before { content: "食"; }
 .blog-card-market { background: linear-gradient(135deg, #285d68, #78a9a5); }.blog-card-market::before { content: "朝"; }
+.blog-card-photo::before, .blog-card-photo::after { display: none; }
+.blog-card-photo img { width: 100%; height: 100%; min-height: inherit; display: block; object-fit: cover; transition: transform .35s ease; }
+.blog-card-photo:hover img { transform: scale(1.025); }
 .blog-card-body { padding: clamp(1.4rem, 3vw, 2.2rem); }
 .blog-card-meta { display: flex; align-items: center; gap: .8rem; margin: 0 0 1rem; color: var(--ink-soft); font-size: .72rem; letter-spacing: .05em; }
 .blog-card-meta span { padding: .15rem .6rem; color: var(--red-dark); background: #f5e9d8; border-radius: 999px; font-weight: 800; }
@@ -157,16 +160,24 @@ button, input { font: inherit; }
 .blog-card h2 a, .blog-card h3 a { text-decoration: none; }.blog-card h2 a:hover, .blog-card h3 a:hover { text-decoration: underline; text-decoration-color: var(--gold); }
 .blog-card-body > p:not(.blog-card-meta) { color: var(--ink-soft); font-size: .9rem; }
 .blog-card-body .text-link { display: inline-block; margin-top: .8rem; }
-.article-header { padding: clamp(4rem, 8vw, 7rem) 0; background: var(--paper-deep); }
-.article-header h1 { margin: 0; font-family: var(--serif); font-size: clamp(2.5rem, 6vw, 4.8rem); line-height: 1.3; letter-spacing: .06em; }
-.article-lead { max-width: 42rem; margin: 1.8rem 0 0; color: var(--ink-soft); font-family: var(--serif); font-size: 1.15rem; line-height: 1.9; }
-.article-author { margin: 1.8rem 0 0; color: var(--ink-soft); font-size: .78rem; }
-.article-visual { min-height: clamp(240px, 32vw, 430px); position: relative; overflow: hidden; }
-.article-visual::before { position: absolute; right: 12%; bottom: -18%; color: rgba(255,255,255,.88); font-family: var(--serif); font-size: clamp(12rem, 28vw, 24rem); line-height: 1; transform: rotate(-7deg); }
-.article-visual::after { content: ""; position: absolute; left: 8%; top: 16%; width: clamp(120px, 20vw, 250px); height: clamp(120px, 20vw, 250px); border: clamp(24px, 4vw, 52px) solid rgba(255,255,255,.16); border-radius: 50%; }
-.article-body { padding-top: clamp(4rem, 8vw, 7rem); padding-bottom: clamp(5rem, 9vw, 8rem); font-family: var(--serif); font-size: 1.05rem; line-height: 2.1; }
-.article-body > p { margin: 0 0 1.6rem; }.article-body h2 { margin: 3.5rem 0 1rem; font-size: 1.7rem; line-height: 1.55; letter-spacing: .04em; }
-.article-callout { margin: 3rem 0; padding: 1.7rem 2rem; background: #f6edd5; border-left: 5px solid var(--gold); font-family: var(--sans); }.article-callout strong { font-family: var(--serif); font-size: 1.2rem; }.article-callout p { margin: .55rem 0 0; color: var(--ink-soft); font-size: .86rem; }
+.blog-list { max-width: 920px; margin-inline: auto; border-top: 1px solid var(--line); }
+.blog-list-item { display: grid; grid-template-columns: minmax(0, 1fr) 230px; gap: 2rem; align-items: center; padding: 2rem 0; border-bottom: 1px solid var(--line); }
+.blog-list-body h2 { margin: 0 0 .55rem; font-family: var(--serif); font-size: 1.45rem; line-height: 1.5; }
+.blog-list-body h2 a { text-decoration: none; }
+.blog-list-body h2 a:hover { text-decoration: underline; text-decoration-color: var(--gold); }
+.blog-list-body > p:not(.blog-card-meta) { margin: 0; color: var(--ink-soft); font-size: .9rem; }
+.blog-list-body .text-link { display: inline-block; margin-top: .65rem; font-size: .8rem; }
+.blog-list-thumbnail { aspect-ratio: 3 / 2; display: block; overflow: hidden; background: var(--paper-deep); }
+.blog-list-thumbnail img { width: 100%; height: 100%; display: block; object-fit: cover; transition: opacity .2s ease; }
+.blog-list-thumbnail:hover img { opacity: .86; }
+.article-header { padding: clamp(3rem, 6vw, 5rem) 0 2.5rem; background: var(--paper-deep); border-bottom: 1px solid var(--line); }
+.article-header h1 { max-width: 46rem; margin: 0; font-family: var(--serif); font-size: clamp(2rem, 4.5vw, 3.4rem); line-height: 1.35; letter-spacing: .04em; }
+.article-author { margin: 1.2rem 0 0; color: var(--ink-soft); font-size: .78rem; }
+.article-body { padding-top: clamp(2.5rem, 5vw, 4rem); padding-bottom: clamp(4rem, 8vw, 7rem); font-size: 1rem; line-height: 1.95; }
+.article-body > p { margin: 0 0 1.5rem; }
+.article-photo-inline { width: min(560px, 100%); margin: 2rem 0 2.2rem; }
+.article-photo-inline img { width: 100%; height: auto; display: block; }
+.article-photo-inline figcaption { margin-top: .55rem; color: var(--ink-soft); font-size: .75rem; line-height: 1.6; }
 .article-back { margin-top: 4rem !important; padding-top: 1.5rem; border-top: 1px solid var(--line); font-family: var(--sans); }
 
 /* Hidden evidence pages */
@@ -203,6 +214,9 @@ button, input { font: inherit; }
   .notice-inner { grid-template-columns: auto 1fr; gap: .4rem .8rem; padding: .9rem 0; }.notice-inner p { grid-column: 1 / -1; }
   .section-heading { align-items: flex-start; flex-direction: column; }.menu-cards { grid-template-columns: 1fr; }.menu-card:last-child { grid-column: auto; }.menu-card { min-height: 300px; }
   .blog-grid, .blog-grid-home { grid-template-columns: 1fr; }.blog-card-featured { grid-column: auto; }.blog-card-visual, .blog-card-featured .blog-card-visual { min-height: 210px; }
+  .blog-list-item { grid-template-columns: minmax(0, 1fr) 112px; gap: 1rem; padding: 1.4rem 0; align-items: start; }
+  .blog-list-body h2 { font-size: 1.05rem; }.blog-list-body > p:not(.blog-card-meta) { display: none; }.blog-list-body .text-link { margin-top: .35rem; }
+  .blog-list-thumbnail { margin-top: .15rem; }
   .schedule-list, .kodomo-values, .trust-row { grid-template-columns: 1fr; }.trust-row div { border-right: 0; border-bottom: 1px solid var(--line); }.trust-row div:last-child { border-bottom: 0; }.community-stamp { width: 230px; font-size: 1.75rem; }
   .footer-inner { grid-template-columns: 1fr; }.footer-nav { grid-column: auto; flex-wrap: wrap; }.footer-info { order: 3; }
   .page-hero .section-inner { grid-template-columns: 1fr; }.page-hero p:last-child { margin-top: 1rem; }.hours-grid { grid-template-columns: 1fr; }.simple-table th, .simple-table td { display: block; width: 100%; padding: .6rem 0; }.simple-table tr { display: block; padding: .6rem 0; border-bottom: 1px solid var(--line); }.simple-table th, .simple-table td { border: 0; }
