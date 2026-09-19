@@ -260,31 +260,10 @@
     const textarea = document.createElement("textarea");
     textarea.id = inputId;
     textarea.rows = 5;
-    textarea.maxLength = 4000;
+    textarea.maxLength = 12000;
     textarea.placeholder = block.placeholder;
-    textarea.value = state.progress.notes[context.chapter.id]?.content || "";
-
-    const guide = document.createElement("p");
-    guide.className = "markdown-guide";
-    guide.innerHTML = "Markdown対応：<code>**太字**</code> / <code>```コードブロック```</code>";
-    const previewLabel = document.createElement("p");
-    previewLabel.className = "markdown-preview-label";
-    previewLabel.textContent = "プレビュー";
-    const preview = document.createElement("div");
-    preview.className = "markdown-preview";
-    preview.dataset.role = "note-preview";
-    preview.setAttribute("aria-live", "polite");
-
-    const updatePreview = () => {
-      const content = textarea.value;
-      preview.classList.toggle("is-empty", !content.trim());
-      if (content.trim()) {
-        setMarkdown(preview, content);
-      } else {
-        preview.textContent = "入力したメモの表示をここで確認できます。";
-      }
-    };
-    updatePreview();
+    textarea.value = state.progress.note?.content || "";
+    textarea.dataset.dirty = "false";
 
     const actions = document.createElement("div");
     actions.className = "evidence-actions";
@@ -292,18 +271,14 @@
     status.className = "save-status";
     status.dataset.role = "note-status";
     status.setAttribute("role", "status");
-    status.textContent = state.progress.notes[context.chapter.id] ? "保存済み" : "未保存";
-    const button = document.createElement("button");
-    button.className = "ink-button secondary";
-    button.type = "button";
-    button.textContent = block.action_label;
-    button.addEventListener("click", submitNote);
+    status.textContent = state.progress.note?.updated_at ? "同期済み" : "入力すると自動同期します";
     textarea.addEventListener("input", () => {
+      textarea.dataset.dirty = "true";
       setText(status, "編集中…");
-      updatePreview();
+      scheduleNoteSave(textarea, status);
     });
-    actions.append(status, button);
-    card.append(label, textarea, guide, previewLabel, preview, actions);
+    actions.append(status);
+    card.append(label, textarea, actions);
     section.append(card);
     return section;
   }
@@ -588,37 +563,35 @@
     }
   }
 
-  async function submitNote(event) {
-    const section = event.currentTarget.closest('[data-component="evidence-note"]');
-    const textarea = section.querySelector("textarea");
-    const status = section.querySelector('[data-role="note-status"]');
-    const button = event.currentTarget;
-    const originalLabel = button.textContent;
-    button.disabled = true;
-    button.textContent = "保存中…";
+  function scheduleNoteSave(textarea, status, delay = 500) {
+    window.clearTimeout(scheduleNoteSave.timeoutId);
+    scheduleNoteSave.timeoutId = window.setTimeout(
+      () => saveSharedNote(textarea, status),
+      delay,
+    );
+  }
+
+  async function saveSharedNote(textarea, status) {
+    const content = textarea.value;
+    setText(status, "同期中…");
 
     try {
-      const response = await fetch(`/api/notes/${state.activeChapterId}`, {
-        method: "POST",
+      const response = await fetch("/api/note", {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: textarea.value }),
+        body: JSON.stringify({ content }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.detail || "保存できませんでした。");
-      if (!result.saved) {
-        setText(status, result.message);
-        return;
+      state.progress.note = result.note;
+      if (textarea.value === content) {
+        textarea.dataset.dirty = "false";
+        setText(status, "同期済み");
       }
-      state.progress = result.progress;
-      state.chapters = result.chapters;
-      renderChapter({ animateNewDialogue: result.first_note });
-      showToast(result.first_note ? "証拠を保存。会話が追加されました。" : "証拠メモを更新しました。");
     } catch (error) {
-      setText(status, error.message);
-    } finally {
-      if (document.contains(button)) {
-        button.disabled = false;
-        button.textContent = originalLabel;
+      if (document.contains(textarea) && textarea.dataset.dirty === "true") {
+        setText(status, "同期できません。再試行中…");
+        scheduleNoteSave(textarea, status, 2000);
       }
     }
   }
@@ -630,6 +603,31 @@
     showToast.timeoutId = window.setTimeout(() => {
       elements.toast.classList.remove("is-visible");
     }, 2800);
+  }
+
+  async function refreshSharedNote() {
+    const textarea = document.querySelector('[data-component="evidence-note"] textarea');
+    if (!textarea || textarea.dataset.dirty === "true") return;
+    try {
+      const response = await fetch("/api/note");
+      if (!response.ok) return;
+      const note = await response.json();
+      if ((state.progress.note?.updated_at || null) === (note.updated_at || null)) return;
+      applySharedNote(note);
+    } catch (_error) {
+      // 一時的に取得できなくても、表示中のメモと編集内容は維持する。
+    }
+  }
+
+  function applySharedNote(note) {
+    const textarea = document.querySelector('[data-component="evidence-note"] textarea');
+    if (textarea?.dataset.dirty === "true") return;
+    state.progress.note = note;
+    if (!textarea) return;
+    textarea.value = note.content || "";
+    const status = textarea.closest('[data-component="evidence-note"]')
+      ?.querySelector('[data-role="note-status"]');
+    if (status) setText(status, note.updated_at ? "同期済み" : "入力すると自動同期します");
   }
 
   function escapeHtml(value) {
@@ -651,4 +649,16 @@
 
   state.activeChapterId = firstCurrentChapter().id;
   renderChapter();
+  const noteEvents = new EventSource("/api/note/events");
+  noteEvents.addEventListener("message", (event) => {
+    try {
+      applySharedNote(JSON.parse(event.data));
+    } catch (_error) {
+      // 壊れたイベントは無視し、再接続後の初期イベントで復旧する。
+    }
+  });
+  window.addEventListener("focus", refreshSharedNote);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") refreshSharedNote();
+  });
 })();

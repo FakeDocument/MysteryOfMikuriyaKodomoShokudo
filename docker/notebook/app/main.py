@@ -1,12 +1,15 @@
 """九十九探偵事務所の調査ノートUI。"""
 
+import asyncio
 import hashlib
+import json
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
 
 from fastapi import FastAPI, HTTPException, Path as PathParameter, Request
-from fastapi.responses import HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
@@ -37,8 +40,15 @@ app = FastAPI(
     redoc_url=None,
     openapi_url=None,
 )
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://127.0.0.1:6901", "http://localhost:6901"],
+    allow_methods=["GET", "PUT"],
+    allow_headers=["Content-Type"],
+)
 app.mount("/static", StaticFiles(directory=APP_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=str(APP_DIR / "templates"))
+NOTE_SUBSCRIBERS: set[asyncio.Queue[dict]] = set()
 
 
 class AnswerSubmission(BaseModel):
@@ -46,7 +56,7 @@ class AnswerSubmission(BaseModel):
 
 
 class NoteSubmission(BaseModel):
-    content: str = Field(max_length=4000)
+    content: str = Field(max_length=12000)
 
 
 @app.get("/healthz")
@@ -114,34 +124,56 @@ def submit_answer(
     }
 
 
-@app.post("/api/notes/{chapter_id}")
-def submit_note(
-    chapter_id: Annotated[str, PathParameter(pattern=r"^[a-z0-9_-]+$")],
-    submission: NoteSubmission,
-) -> dict:
-    chapter = next((item for item in CHAPTERS if item["id"] == chapter_id), None)
-    if chapter is None:
-        raise HTTPException(status_code=404, detail="章が見つかりません。")
+@app.get("/api/note")
+def get_note() -> dict:
+    return get_progress(CHAPTERS)["note"]
 
-    current_progress = get_progress(CHAPTERS)
-    if chapter_id not in current_progress["unlocked_chapter_ids"]:
-        raise HTTPException(status_code=403, detail="この章はまだ開かれていません。")
 
-    content = submission.content.strip()
-    if not content:
-        return {
-            "saved": False,
-            "message": "証拠欄が空です。見つけた事実を書き留めましょう。",
-            "progress": current_progress,
-        }
+def publish_note(note: dict) -> None:
+    """接続中の画面へ最新のメモだけを配信する。"""
+    for queue in tuple(NOTE_SUBSCRIBERS):
+        if queue.full():
+            try:
+                queue.get_nowait()
+            except asyncio.QueueEmpty:
+                pass
+        queue.put_nowait(note)
 
-    first_note = chapter_id not in current_progress["acknowledged_note_chapter_ids"]
-    save_note(chapter_id, content, acknowledged=True)
+
+@app.put("/api/note")
+async def submit_note(submission: NoteSubmission) -> dict:
+    save_note(submission.content)
     updated_progress = get_progress(CHAPTERS)
+    publish_note(updated_progress["note"])
     return {
         "saved": True,
-        "first_note": first_note,
-        "message": "証拠メモを保存しました。",
+        "message": "調査メモを保存しました。",
+        "note": updated_progress["note"],
         "progress": updated_progress,
-        "chapters": public_chapters(updated_progress),
     }
+
+
+@app.get("/api/note/events")
+async def note_events(request: Request) -> StreamingResponse:
+    async def stream():
+        queue: asyncio.Queue[dict] = asyncio.Queue(maxsize=1)
+        NOTE_SUBSCRIBERS.add(queue)
+        try:
+            yield f"data: {json.dumps(get_note(), ensure_ascii=False)}\n\n"
+            while not await request.is_disconnected():
+                try:
+                    note = await asyncio.wait_for(queue.get(), timeout=20)
+                    yield f"data: {json.dumps(note, ensure_ascii=False)}\n\n"
+                except TimeoutError:
+                    yield ": keepalive\n\n"
+        finally:
+            NOTE_SUBSCRIBERS.discard(queue)
+
+    return StreamingResponse(
+        stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )

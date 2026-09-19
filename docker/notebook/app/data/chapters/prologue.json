@@ -110,27 +110,6 @@
         "action_label": "証拠を貼り込む"
       },
       {
-        "type": "dialogue",
-        "id": "after-note",
-        "visible_when": {
-          "event": "note_saved"
-        },
-        "heading": {
-          "kicker": "FOLLOW-UP",
-          "title": "証拠メモを受けて"
-        },
-        "messages": [
-          {
-            "speaker": "player",
-            "text": "手紙にあった『そろそろころあい』って言葉、何だか妙に引っかかります。"
-          },
-          {
-            "speaker": "director",
-            "text": "さあ、今は決めつけないでおきましょう。気になった違和感は、そのまま手元に残しておけばいいですよ。"
-          }
-        ]
-      },
-      {
         "type": "questions",
         "id": "investigation",
         "heading": {

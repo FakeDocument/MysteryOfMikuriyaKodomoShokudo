@@ -46,7 +46,7 @@
             "text": "さあ、こちらをどうぞ。調査用に用意した端末です。必要な道具は一通り入っています。ああ、本案件に関するサイトアクセスはすべてこの端末からしか行えないので注意してくださいね。",
             "link": {
               "label": "調査端末を開く",
-              "href": "http://127.0.0.1:6901/vnc.html?autoconnect=true"
+              "href": "http://127.0.0.1:6901/vnc.html?autoconnect=true&reconnect=true&reconnect_delay=5000"
             }
           },
           {
@@ -68,11 +68,11 @@
           },
           {
             "speaker": "director",
-            "text": "御厨水産のWebサイトは http://www.mikuriya-suisan.local/、同じサーバーのIPアドレスは 172.30.0.10 です。IPアドレスは、ネットワーク上にあるサーバーの住所だと思ってください。まずは、その住所で何が待ち受けているかを調べます。"
+            "text": "御厨水産のWebサイトは `http://www.mikuriya-suisan.local/` です。この `www.mikuriya-suisan.local` というドメイン名は、これから使う調査ツールでもそのまま指定できます。まずは、そのサーバーで何が待ち受けているかを調べます。"
           },
           {
             "speaker": "player",
-            "text": "何が待ち受けているか……どうやって調べるんです？"
+            "text": "そのサーバーで何が待ち受けているか……どうやって調べるんです？"
           },
           {
             "speaker": "director",
@@ -84,11 +84,11 @@
           },
           {
             "speaker": "director",
-            "text": "nmap -sV 172.30.0.10 と入力して、Enterキーを押してください。-sV はサービスの種類やバージョンも調べる指定です。結果が出たら、PORT・STATE・SERVICEと並んだ表のうち、STATEが open の行を読みます。"
+            "text": "次のコマンドを入力して、Enterキーを押してください。\n\n```sh\nnmap -sV www.mikuriya-suisan.local\n```\n\n`-sV` はサービスの種類やバージョンも調べる指定です。結果が出たら、`PORT`・`STATE`・`SERVICE` と並んだ表のうち、`STATE` が `open` の行を読みます。"
           },
           {
             "speaker": "player",
-            "text": "まずは open の行にある、ポート番号とサービス名をそのまま読めばいいんですね。"
+            "text": "まずは `open` の行にある、ポート番号とサービス名をそのまま読めばいいんですね。"
           },
           {
             "speaker": "director",
@@ -109,27 +109,6 @@
         "action_label": "証拠を貼り込む"
       },
       {
-        "type": "dialogue",
-        "id": "after-note",
-        "visible_when": {
-          "event": "note_saved"
-        },
-        "heading": {
-          "kicker": "FOLLOW-UP",
-          "title": "証拠メモを受けて"
-        },
-        "messages": [
-          {
-            "speaker": "player",
-            "text": "ここまでに分かったことは、調査メモに残しました。"
-          },
-          {
-            "speaker": "director",
-            "text": "仕事が早いですね。表向きの顔がきれいな店ほど、裏に置き忘れたものがよく目立ちます。"
-          }
-        ]
-      },
-      {
         "type": "questions",
         "id": "port-scan",
         "heading": {
@@ -142,7 +121,7 @@
             "type": "question",
             "id": "ch1_web_port_service",
             "label": "調査 01",
-            "prompt": "Nmapの結果で最初に表示された open の行を記録してください。",
+            "prompt": "Nmapの結果で最初に表示された `open` の行を記録してください。",
             "answer_fields": [
               {
                 "id": "port",
@@ -183,7 +162,7 @@
                   },
                   {
                     "speaker": "director",
-                    "text": "HTTPは、ブラウザとサーバーがWebページのデータをやり取りするためのサービスです。つまり80番ポートでは、寿司屋のWebサイトが待っています。もう一つの open の行も確認して、どちらから調べるか決めましょう。"
+                    "text": "HTTPは、ブラウザとサーバーがWebページのデータをやり取りするためのサービスです。つまり80番ポートでは、寿司屋のWebサイトが待っています。もう一つの `open` の行も確認して、どちらから調べるか決めましょう。"
                   }
                 ]
               }
@@ -193,7 +172,7 @@
             "type": "question",
             "id": "ch1_samba_port_service",
             "label": "調査 02",
-            "prompt": "Nmapの結果でもう一つ表示された open の行を記録してください。",
+            "prompt": "Nmapの結果でもう一つ表示された `open` の行を記録してください。",
             "answer_fields": [
               {
                 "id": "port",
@@ -272,7 +251,7 @@
           },
           {
             "speaker": "director",
-            "text": "ええ。まず調査端末内のブラウザで http://www.mikuriya-suisan.local/ を開いてみてください。"
+            "text": "ええ。まず調査端末内のブラウザで `http://www.mikuriya-suisan.local/` を開いてみてください。"
           },
           {
             "speaker": "player",
@@ -288,7 +267,7 @@
           },
           {
             "speaker": "director",
-            "text": "普通でないページも探すんですよ。DIRBは、名前の一覧にある候補をURLの末尾へ一つずつ付け、リンクされていないページを見つける手掛かりを集める道具です。dirb http://www.mikuriya-suisan.local/ /usr/share/dirb/wordlists/common.txt -S -r と入力して、Enterキーを押してください。-S は試行中の大量表示を省き、-r は見つけたディレクトリの中を続けて調べない指定です。今回は店のサイトの一階層目だけを確認しましょう。"
+            "text": "普通でないページも探すんですよ。DIRBは、名前の一覧にある候補をURLの末尾へ一つずつ付け、リンクされていないページを見つける手掛かりを集める道具です。次のコマンドを入力して、Enterキーを押してください。\n\n```sh\ndirb http://www.mikuriya-suisan.local/ /usr/share/dirb/wordlists/common.txt -S -r\n```\n\n`-S` は試行中の大量表示を省き、`-r` は見つけたディレクトリの中を続けて調べない指定です。今回は店のサイトの一階層目だけを確認しましょう。"
           },
           {
             "speaker": "player",

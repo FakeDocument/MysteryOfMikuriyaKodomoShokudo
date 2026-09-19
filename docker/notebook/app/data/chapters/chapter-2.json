@@ -27,15 +27,15 @@
           },
           {
             "speaker": "director",
-            "text": "smbclientを使います。Sambaの共有フォルダを調べたり、中へ接続したりするための道具です。まずは、店のサーバーが公開している共有名を確認しましょう。"
+            "text": "`smbclient` を使います。Sambaの共有フォルダを調べたり、中へ接続したりするための道具です。まずは、店のサーバーが公開している共有名を確認しましょう。"
           },
           {
             "speaker": "director",
-            "text": "調査端末のターミナルで smbclient -L //172.30.0.10 -U kanzaki と入力してください。-L は共有の一覧表示、-U はログインに使うアカウントIDの指定です。"
+            "text": "調査端末のターミナルで、次のコマンドを入力してください。\n\n```sh\nsmbclient -L //www.mikuriya-suisan.local -U kanzaki\n```\n\n`-L` は共有の一覧表示、`-U` はログインに使うアカウントIDの指定です。"
           },
           {
             "speaker": "player",
-            "text": "Password for と表示されました。ここに Kanzaki2019 を入力すればいいんですね。"
+            "text": "`Password for` と表示されました。ここに `Kanzaki2019` を入力すればいいんですね。"
           },
           {
             "speaker": "director",
@@ -43,11 +43,11 @@
           },
           {
             "speaker": "player",
-            "text": "Sharename、Type、Commentという表が出ました。最後にSMB1へ接続できない、という表示もありますけど……失敗ですか？"
+            "text": "`Sharename`、`Type`、`Comment` という表が出ました。最後にSMB1へ接続できない、という表示もありますけど……失敗ですか？"
           },
           {
             "speaker": "director",
-            "text": "表に共有が表示されていれば成功です。末尾の Unable to connect with SMB1 は、古い方式で追加のワークグループ一覧を取れなかったというだけです。今回はSharename列にある、TypeがDiskの共有名を記録してください。"
+            "text": "表に共有が表示されていれば成功です。末尾の `Unable to connect with SMB1` は、古い方式で追加のワークグループ一覧を取れなかったというだけです。今回は `Sharename` 列にある、`Type` が `Disk` の共有名を記録してください。"
           }
         ]
       },
@@ -62,27 +62,6 @@
         "label": "調査中に確認した事実や、気になった言葉を自由に書き留める",
         "placeholder": "例：共有名、ファイル名、人物名、気になった表現……",
         "action_label": "証拠を貼り込む"
-      },
-      {
-        "type": "dialogue",
-        "id": "after-note",
-        "visible_when": {
-          "event": "note_saved"
-        },
-        "heading": {
-          "kicker": "FOLLOW-UP",
-          "title": "証拠メモを受けて"
-        },
-        "messages": [
-          {
-            "speaker": "player",
-            "text": "Sambaで確認したことを、調査メモに残しました。"
-          },
-          {
-            "speaker": "director",
-            "text": "結構です。後で辿り直せるよう、見つけた場所も一緒に控えておくといいですよ。"
-          }
-        ]
       },
       {
         "type": "questions",
@@ -105,8 +84,8 @@
                 "type": "hints",
                 "id": "hints",
                 "items": [
-                  "smbclient -L //172.30.0.10 -U kanzaki を実行し、Sharename・Type・Commentと並ぶ表を確認してください。探すのはTypeがDiskの行です。",
-                  "Sharename列の staff が調査に使う共有名です。末尾に出るSMB1の警告ではなく、その前の共有一覧を読みましょう。"
+                  "次のコマンドを実行し、`Sharename`・`Type`・`Comment` と並ぶ表を確認してください。探すのは `Type` が `Disk` の行です。\n\n```sh\nsmbclient -L //www.mikuriya-suisan.local -U kanzaki\n```",
+                  "`Sharename` 列の `staff` が調査に使う共有名です。末尾に出るSMB1の警告ではなく、その前の共有一覧を読みましょう。"
                 ]
               },
               {
@@ -151,7 +130,7 @@
         "messages": [
           {
             "speaker": "director",
-            "text": "ターミナルで smbclient //172.30.0.10/staff -U kanzaki を実行し、先ほどと同じパスワードを入力してください。smb: \\> と表示されれば接続成功です。"
+            "text": "ターミナルで次のコマンドを実行し、先ほどと同じパスワードを入力してください。\n\n```sh\nsmbclient //www.mikuriya-suisan.local/staff -U kanzaki\n```\n\n`smb: \\>` と表示されれば接続成功です。"
           },
           {
             "speaker": "player",
@@ -159,7 +138,7 @@
           },
           {
             "speaker": "director",
-            "text": "今はサーバー上の共有を操作しています。ls で一覧表示、cd ディレクトリ名 で移動、get ファイル名 で調査端末の /home/player へ取得できます。終了は quit です。取得したファイルはMousepadなどで読めますよ。"
+            "text": "今はサーバー上の共有を操作しています。`ls` で一覧表示、`cd ディレクトリ名` で移動、`get ファイル名` で調査端末の `/home/player` へ取得できます。終了は `quit` です。取得したファイルはMousepadなどで読めますよ。"
                   }
                 ]
       },

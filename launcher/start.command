@@ -31,7 +31,7 @@ for svc in notebook sushi portal kali; do
 done
 
 open "http://127.0.0.1:8080/" || true
-open "http://127.0.0.1:6901/vnc.html?autoconnect=true" || true
+open "http://127.0.0.1:6901/vnc.html?autoconnect=true&reconnect=true&reconnect_delay=5000" || true
 
 echo "起動が完了しました。このウィンドウは閉じても構いません。"
 read -r -p "Enterキーで終了します..." _

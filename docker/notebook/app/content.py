@@ -19,7 +19,7 @@ STATIC_IMAGES_DIR = Path(__file__).parent / "static" / "images"
 ANSWER_ONLY_KEYS = {"accepted", "validation", "required_terms", "incorrect_message"}
 ALLOWED_VALIDATIONS = {"one_of", "exact", "contains_all"}
 ALLOWED_SPEAKERS = {"director", "player"}
-ALLOWED_VISIBILITY_EVENTS = {"note_saved", "question_solved", "questions_solved"}
+ALLOWED_VISIBILITY_EVENTS = {"question_solved", "questions_solved"}
 ALLOWED_TOP_LEVEL_BLOCKS = {"dialogue", "document", "evidence_note", "questions", "report"}
 ALLOWED_QUESTION_BLOCKS = {"hints", "dialogue"}
 DIALOGUE_IMAGE_PATH = re.compile(
@@ -348,7 +348,7 @@ def _validate_chapter_blocks(
             _validate_visibility(
                 block.get("visible_when"),
                 f"{location}.visible_when",
-                {"note_saved", "questions_solved"},
+                "questions_solved",
             )
             _validate_dialogue(block.get("messages"), f"{location}.messages")
         elif block_type == "document":
@@ -573,7 +573,6 @@ def public_chapters(progress: dict[str, Any] | None = None) -> list[dict[str, An
     """ブラウザへ渡せる範囲だけに絞り、正解と未解放の内容を除く。"""
 
     solved_ids = set(progress["solved_question_ids"]) if progress else set()
-    acknowledged_notes = set(progress["acknowledged_note_chapter_ids"]) if progress else set()
     unlocked_ids = set(progress["unlocked_chapter_ids"]) if progress else {"prologue"}
     chapters = deepcopy(CHAPTERS)
     for chapter in chapters:
@@ -589,8 +588,6 @@ def public_chapters(progress: dict[str, Any] | None = None) -> list[dict[str, An
             visibility = block.get("visible_when")
             if visibility:
                 event = visibility.get("event")
-                if event == "note_saved" and chapter["id"] not in acknowledged_notes:
-                    continue
                 if event == "questions_solved" and not set(
                     visibility["question_ids"]
                 ).issubset(solved_ids):

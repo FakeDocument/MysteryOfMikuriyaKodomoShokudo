@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 import shutil
@@ -16,7 +17,7 @@ from app.content import (
     public_chapters,
     validate_answer,
 )
-from app.store import get_progress, initialize_database, save_answer, save_note
+from app.store import connect, get_progress, initialize_database, save_answer, save_note
 
 
 def block_of_type(chapter, block_type):
@@ -129,7 +130,6 @@ class ContentFileTest(unittest.TestCase):
         def chapter_four_with(solved_question_ids):
             progress = {
                 "solved_question_ids": solved_question_ids,
-                "acknowledged_note_chapter_ids": [],
                 "unlocked_chapter_ids": [
                     "prologue", "chapter-1", "chapter-2", "chapter-3", "chapter-4"
                 ],
@@ -167,14 +167,12 @@ class ContentFileTest(unittest.TestCase):
     def test_finale_shows_report_and_call_without_repeating_questions(self):
         locked = public_chapters({
             "solved_question_ids": [],
-            "acknowledged_note_chapter_ids": [],
             "unlocked_chapter_ids": ["prologue", "chapter-1", "chapter-2", "chapter-3", "chapter-4"],
         })[5]
         self.assertEqual(locked["blocks"], [])
 
         open_finale = public_chapters({
             "solved_question_ids": ["ch4_handoff_schedule"],
-            "acknowledged_note_chapter_ids": [],
             "unlocked_chapter_ids": [
                 "prologue", "chapter-1", "chapter-2", "chapter-3", "chapter-4", "finale"
             ],
@@ -237,11 +235,30 @@ class ContentFileTest(unittest.TestCase):
         self.assertIn("const blockRenderers", script)
         self.assertIn("renderBlocks(chapter.blocks", script)
 
-    def test_public_site_address_and_scan_ip_are_both_explained(self):
+    def test_player_commands_use_markdown_code_blocks(self):
+        chapter_one = json.dumps(CHAPTERS[1], ensure_ascii=False)
+        chapter_two = json.dumps(CHAPTERS[2], ensure_ascii=False)
+        chapter_three = json.dumps(CHAPTERS[3], ensure_ascii=False)
+        chapter_four = json.dumps(CHAPTERS[4], ensure_ascii=False)
+
+        self.assertIn("```sh\\nnmap -sV www.mikuriya-suisan.local\\n```", chapter_one)
+        self.assertIn("```sh\\ndirb http://www.mikuriya-suisan.local/", chapter_one)
+        self.assertIn(
+            "```sh\\nsmbclient -L //www.mikuriya-suisan.local -U kanzaki\\n```",
+            chapter_two,
+        )
+        self.assertIn("```text\\n' OR 1=1 -- \\n```", chapter_three)
+        self.assertIn(
+            "```sh\\nsmbclient -L //kaiiki-hozen.local -N\\n```",
+            chapter_four,
+        )
+
+    def test_public_site_domain_is_used_for_service_scan(self):
         opening = CHAPTERS[1]["blocks"][0]
         dialogue = "".join(message["text"] for message in opening["messages"])
         self.assertIn("http://www.mikuriya-suisan.local/", dialogue)
-        self.assertIn("172.30.0.10", dialogue)
+        self.assertIn("nmap -sV www.mikuriya-suisan.local", dialogue)
+        self.assertNotIn("172.30.0.10", dialogue)
 
     def test_chapter_one_dialogue_links_to_investigation_terminal(self):
         opening = CHAPTERS[1]["blocks"][0]
@@ -251,7 +268,7 @@ class ContentFileTest(unittest.TestCase):
         self.assertEqual(terminal_message["link"]["label"], "調査端末を開く")
         self.assertEqual(
             terminal_message["link"]["href"],
-            "http://127.0.0.1:6901/vnc.html?autoconnect=true",
+            "http://127.0.0.1:6901/vnc.html?autoconnect=true&reconnect=true&reconnect_delay=5000",
         )
 
         app_dir = CHAPTERS_MANIFEST_PATH.parent.parent.parent
@@ -265,7 +282,7 @@ class ContentFileTest(unittest.TestCase):
         )
         for expected in (
             "接続用パスワードは 99",
-            "IPアドレス",
+            "nmap -sV www.mikuriya-suisan.local",
             "PORT",
             "STATE",
             "SERVICE",
@@ -335,7 +352,6 @@ class ContentFileTest(unittest.TestCase):
         def chapter_one_with(solved_question_ids):
             progress = {
                 "solved_question_ids": solved_question_ids,
-                "acknowledged_note_chapter_ids": [],
                 "unlocked_chapter_ids": ["prologue", "chapter-1"],
             }
             return public_chapters(progress)[1]
@@ -491,7 +507,6 @@ class ContentFileTest(unittest.TestCase):
         def chapter_two_with(solved_question_ids):
             progress = {
                 "solved_question_ids": solved_question_ids,
-                "acknowledged_note_chapter_ids": [],
                 "unlocked_chapter_ids": ["prologue", "chapter-1", "chapter-2"],
             }
             return public_chapters(progress)[2]
@@ -512,7 +527,10 @@ class ContentFileTest(unittest.TestCase):
         opening_dialogue = "".join(
             message["text"] for message in start["blocks"][0]["messages"]
         )
-        self.assertIn("smbclient -L //172.30.0.10 -U kanzaki", opening_dialogue)
+        self.assertIn(
+            "smbclient -L //www.mikuriya-suisan.local -U kanzaki",
+            opening_dialogue,
+        )
         self.assertIn("Unable to connect with SMB1", opening_dialogue)
         self.assertEqual(
             [question["id"] for question in questions_in(start)],
@@ -531,10 +549,13 @@ class ContentFileTest(unittest.TestCase):
         share_dialogue = "".join(
             message["text"] for message in share_transition["messages"]
         )
-        self.assertIn("smbclient //172.30.0.10/staff -U kanzaki", share_dialogue)
-        self.assertIn("ls で一覧表示", share_dialogue)
-        self.assertIn("cd ディレクトリ名", share_dialogue)
-        self.assertIn("get ファイル名", share_dialogue)
+        self.assertIn(
+            "smbclient //www.mikuriya-suisan.local/staff -U kanzaki",
+            share_dialogue,
+        )
+        self.assertIn("`ls` で一覧表示", share_dialogue)
+        self.assertIn("`cd ディレクトリ名`", share_dialogue)
+        self.assertIn("`get ファイル名`", share_dialogue)
         for undiscovered_term in (
             "01_child_records",
             "sasaki_ema.txt",
@@ -612,7 +633,6 @@ class ContentFileTest(unittest.TestCase):
         def chapter_three_with(solved_question_ids):
             progress = {
                 "solved_question_ids": solved_question_ids,
-                "acknowledged_note_chapter_ids": [],
                 "unlocked_chapter_ids": [
                     "prologue",
                     "chapter-1",
@@ -736,7 +756,12 @@ class ContentFileTest(unittest.TestCase):
             shutil.copytree(CHAPTERS_MANIFEST_PATH.parent, temp_chapters)
             chapter_path = temp_chapters / "chapter-1.json"
             chapter_data = json.loads(chapter_path.read_text(encoding="utf-8"))
-            chapter_data["chapter"]["blocks"][3]["items"][0]["answer_fields"] = [
+            port_scan = next(
+                block
+                for block in chapter_data["chapter"]["blocks"]
+                if block["id"] == "port-scan"
+            )
+            port_scan["items"][0]["answer_fields"] = [
                 {
                     "id": "port",
                     "label": "ポート番号",
@@ -835,11 +860,64 @@ class ProgressStoreTest(unittest.TestCase):
             ["prologue", "chapter-1", "chapter-2"],
         )
 
-    def test_note_is_persisted_and_acknowledged(self):
-        save_note("prologue", "依頼書を確認した。", acknowledged=True)
+    def test_note_is_shared_across_all_chapters(self):
+        save_note("依頼書を確認した。")
         progress = get_progress(CHAPTERS)
-        self.assertEqual(progress["notes"]["prologue"]["content"], "依頼書を確認した。")
-        self.assertIn("prologue", progress["acknowledged_note_chapter_ids"])
+        self.assertEqual(progress["note"]["content"], "依頼書を確認した。")
+        self.assertIsNotNone(progress["note"]["updated_at"])
+        self.assertNotIn("notes", progress)
+        self.assertNotIn("acknowledged_note_chapter_ids", progress)
+
+    def test_legacy_chapter_notes_are_merged_into_shared_note(self):
+        with connect() as connection:
+            connection.execute(
+                "INSERT INTO notes VALUES (?, ?, ?, ?)",
+                ("prologue", "依頼書のメモ", 1, "2026-09-10T01:00:00+00:00"),
+            )
+            connection.execute(
+                "INSERT INTO notes VALUES (?, ?, ?, ?)",
+                ("chapter-1", "寿司屋のメモ", 1, "2026-09-10T02:00:00+00:00"),
+            )
+
+        progress = get_progress(CHAPTERS)
+        self.assertEqual(progress["note"]["content"], "依頼書のメモ\n\n寿司屋のメモ")
+
+    def test_shared_note_api_reads_writes_and_allows_clearing(self):
+        from app.main import NoteSubmission, app, get_note, submit_note
+
+        saved = asyncio.run(submit_note(NoteSubmission(content="全章共通のメモ")))
+        self.assertTrue(saved["saved"])
+        self.assertEqual(saved["note"]["content"], "全章共通のメモ")
+        self.assertEqual(get_note()["content"], "全章共通のメモ")
+
+        cleared = asyncio.run(submit_note(NoteSubmission(content="")))
+        self.assertEqual(cleared["note"]["content"], "")
+        note_methods = {
+            method
+            for route in app.routes
+            if route.path == "/api/note"
+            for method in route.methods
+        }
+        self.assertEqual(note_methods, {"GET", "PUT"})
+        event_methods = {
+            method
+            for route in app.routes
+            if route.path == "/api/note/events"
+            for method in route.methods
+        }
+        self.assertEqual(event_methods, {"GET"})
+
+    def test_note_publish_keeps_only_latest_pending_event(self):
+        from app.main import NOTE_SUBSCRIBERS, publish_note
+
+        queue = asyncio.Queue(maxsize=1)
+        NOTE_SUBSCRIBERS.add(queue)
+        try:
+            publish_note({"content": "古いメモ"})
+            publish_note({"content": "最新のメモ"})
+            self.assertEqual(queue.get_nowait(), {"content": "最新のメモ"})
+        finally:
+            NOTE_SUBSCRIBERS.discard(queue)
 
     def test_finale_unlocks_after_chapter_four_final_answer(self):
         for chapter in CHAPTERS[:5]:

@@ -9,6 +9,9 @@ from pathlib import Path
 from typing import Any
 
 
+SHARED_NOTE_ID = "__shared__"
+
+
 def database_path() -> Path:
     explicit_path = os.environ.get("NOTEBOOK_DB_PATH")
     if explicit_path:
@@ -46,6 +49,29 @@ def initialize_database() -> None:
             )
             """
         )
+        shared_note = connection.execute(
+            "SELECT 1 FROM notes WHERE chapter_id = ?",
+            (SHARED_NOTE_ID,),
+        ).fetchone()
+        if shared_note is None:
+            legacy_rows = connection.execute(
+                """
+                SELECT content
+                FROM notes
+                WHERE chapter_id != ? AND TRIM(content) != ''
+                ORDER BY updated_at
+                """,
+                (SHARED_NOTE_ID,),
+            ).fetchall()
+            legacy_contents = list(dict.fromkeys(row["content"] for row in legacy_rows))
+            if legacy_contents:
+                connection.execute(
+                    """
+                    INSERT INTO notes (chapter_id, content, acknowledged, updated_at)
+                    VALUES (?, ?, 1, ?)
+                    """,
+                    (SHARED_NOTE_ID, "\n\n".join(legacy_contents), now_iso()),
+                )
 
 
 def now_iso() -> str:
@@ -66,7 +92,7 @@ def save_answer(question_id: str, answer: str) -> None:
         )
 
 
-def save_note(chapter_id: str, content: str, acknowledged: bool) -> None:
+def save_note(content: str) -> None:
     with connect() as connection:
         connection.execute(
             """
@@ -74,10 +100,10 @@ def save_note(chapter_id: str, content: str, acknowledged: bool) -> None:
             VALUES (?, ?, ?, ?)
             ON CONFLICT(chapter_id) DO UPDATE SET
                 content = excluded.content,
-                acknowledged = MAX(notes.acknowledged, excluded.acknowledged),
+                acknowledged = 1,
                 updated_at = excluded.updated_at
             """,
-            (chapter_id, content, int(acknowledged), now_iso()),
+            (SHARED_NOTE_ID, content, 1, now_iso()),
         )
 
 
@@ -87,9 +113,10 @@ def get_progress(chapters: list[dict[str, Any]]) -> dict[str, Any]:
         answer_rows = connection.execute(
             "SELECT question_id, answer, solved_at FROM answers"
         ).fetchall()
-        note_rows = connection.execute(
-            "SELECT chapter_id, content, acknowledged, updated_at FROM notes"
-        ).fetchall()
+        note_row = connection.execute(
+            "SELECT content, updated_at FROM notes WHERE chapter_id = ?",
+            (SHARED_NOTE_ID,),
+        ).fetchone()
 
     current_question_ids = {
         question_id
@@ -105,14 +132,11 @@ def get_progress(chapters: list[dict[str, Any]]) -> dict[str, Any]:
         for row in answer_rows
         if row["question_id"] in current_question_ids
     }
-    notes = {
-        row["chapter_id"]: {
-            "content": row["content"],
-            "acknowledged": bool(row["acknowledged"]),
-            "updated_at": row["updated_at"],
-        }
-        for row in note_rows
-    }
+    note = (
+        {"content": note_row["content"], "updated_at": note_row["updated_at"]}
+        if note_row
+        else {"content": "", "updated_at": None}
+    )
 
     solved_ids = set(answers)
     unlocked_ids: list[str] = []
@@ -139,11 +163,8 @@ def get_progress(chapters: list[dict[str, Any]]) -> dict[str, Any]:
 
     return {
         "answers": answers,
-        "notes": notes,
+        "note": note,
         "solved_question_ids": sorted(solved_ids),
-        "acknowledged_note_chapter_ids": sorted(
-            chapter_id for chapter_id, note in notes.items() if note["acknowledged"]
-        ),
         "unlocked_chapter_ids": unlocked_ids,
         "completed_chapter_ids": completed_ids,
         "solved_count": len(solved_ids),

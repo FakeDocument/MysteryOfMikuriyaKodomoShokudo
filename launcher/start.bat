@@ -30,7 +30,7 @@ if errorlevel 1 goto wait_loop
 
 :open_browser
 start "" "http://127.0.0.1:8080/"
-start "" "http://127.0.0.1:6901/vnc.html?autoconnect=true"
+start "" "http://127.0.0.1:6901/vnc.html?autoconnect=true&reconnect=true&reconnect_delay=5000"
 
 echo 起動が完了しました。
 pause

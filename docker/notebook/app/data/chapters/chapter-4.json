@@ -146,8 +146,8 @@
                 "id": "hints",
                 "items": [
                   "第2章で使った共有一覧の確認方法を見返す。今回はIDやパスワードを指定せずに試せる。",
-                  "`smbclient -L //kaiiki-hozen.local -N` で共有を列挙できる。`-N` はパスワードを尋ねずに接続する指定。Sharenameの一覧が出ていれば成功。",
-                  "引継用の共有は `smbclient //kaiiki-hozen.local/handover -N` で開ける。READMEと端末設定票を読む。"
+                  "次のコマンドで共有を列挙できる。`-N` はパスワードを尋ねずに接続する指定。`Sharename` の一覧が出ていれば成功。\n\n```sh\nsmbclient -L //kaiiki-hozen.local -N\n```",
+                  "引継用の共有は次のコマンドで開ける。`README` と端末設定票を読む。\n\n```sh\nsmbclient //kaiiki-hozen.local/handover -N\n```"
                 ]
               }
             ]

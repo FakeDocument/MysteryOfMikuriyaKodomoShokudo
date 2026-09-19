@@ -920,62 +920,9 @@ textarea:focus-visible {
   color: rgba(73, 71, 55, 0.45);
 }
 
-.markdown-guide {
-  margin: 7px 4px 14px;
-  color: rgba(73, 71, 55, 0.72);
-  font-size: 10px;
-  line-height: 1.6;
-}
-
-.markdown-guide code {
-  padding: 1px 4px;
-  background: rgba(255, 255, 255, 0.42);
-  border-radius: 2px;
-  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
-}
-
-.markdown-preview-label {
-  margin: 0 4px 6px;
-  color: #655b37;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-}
-
-.markdown-preview {
-  min-height: 48px;
-  padding: 12px 14px;
-  overflow-wrap: anywhere;
-  background: rgba(255, 255, 255, 0.56);
-  border: 1px dashed rgba(101, 91, 55, 0.38);
-  border-radius: 3px;
-  color: #24342e;
-  font-family: var(--font-serif);
-  font-size: 14px;
-  line-height: 1.75;
-}
-
-.markdown-preview.is-empty {
-  color: rgba(73, 71, 55, 0.5);
-  font-size: 12px;
-}
-
-.markdown-preview > :first-child {
-  margin-top: 0;
-}
-
-.markdown-preview > :last-child {
-  margin-bottom: 0;
-}
-
-.markdown-preview p {
-  margin: 0 0 0.75em;
-}
-
 .dialogue-copy code,
 .document-paragraph code,
 .hint-copy code,
-.markdown-preview code,
 .question-prompt code,
 .question-card > label code,
 .report-conclusion code,
@@ -989,8 +936,7 @@ textarea:focus-visible {
 
 .dialogue-copy pre,
 .document-paragraph pre,
-.hint-copy pre,
-.markdown-preview pre {
+.hint-copy pre {
   margin: 0.8em 0;
   padding: 11px 13px;
   overflow-x: auto;
@@ -1007,8 +953,7 @@ textarea:focus-visible {
 
 .dialogue-copy pre code,
 .document-paragraph pre code,
-.hint-copy pre code,
-.markdown-preview pre code {
+.hint-copy pre code {
   padding: 0;
   color: inherit;
   background: transparent;

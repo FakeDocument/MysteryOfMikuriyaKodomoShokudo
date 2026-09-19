@@ -21,20 +21,20 @@ chapters/
 
 - `dialogue`: 所長と主人公の会話。`messages`の順に吹き出しを表示
 - `document`: 依頼書などの文書
-- `evidence_note`: 自由記述の証拠メモ
+- `evidence_note`: 全章で内容を共有する、自由記述の調査メモ
 - `questions`: 設問カードのまとまり
 - `report`: 正答後に表示する、項目と結論を持つ調査報告書
 
 ## Markdown
 
-章本文と証拠メモでは、次のMarkdownを使用できます。HTMLは文字として表示され、タグとしては実行されません。
+章本文では、次のMarkdownを使用できます。HTMLは文字として表示され、タグとしては実行されません。プレイヤーが入力する証拠メモはプレーンテキストとして保存します。
 
 - `**重要な証拠**`: 太字
 - `` `nmap -sV` ``: 文中のコード
 - 行頭と行末を `` ``` `` で囲む: コードブロック。開始側には `` ```sh `` のように言語名も付けられます
 - 空行: 段落の区切り
 
-コードブロックは`messages[].text`、`document.content.body[]`、`hints.items[]`、プレイヤーが入力する証拠メモで使用できます。章の`objective`・`lead`、設問の`prompt`、報告書の`conclusion`では太字と文中コードを使用できます。
+コードブロックは`messages[].text`、`document.content.body[]`、`hints.items[]`で使用できます。章の`objective`・`lead`、設問の`prompt`、報告書の`conclusion`では太字と文中コードを使用できます。
 
 ````json
 {
@@ -48,23 +48,7 @@ chapters/
 - `hints`: 所長の付箋
 - `dialogue`: その設問の調査結果を受けての会話
 
-章を開いた時から見せる会話は、表示したい位置へ条件なしの`dialogue`を置きます。依頼書より前へ置けば依頼書前に、後ろへ置けば読後に表示されます。特定の進捗後だけ見せる場合は、ブロックへ`visible_when`を付けます。
-
-```json
-{
-  "type": "dialogue",
-  "id": "after-note",
-  "visible_when": { "event": "note_saved" },
-  "heading": {
-    "kicker": "FOLLOW-UP",
-    "title": "証拠メモを受けて"
-  },
-  "messages": [
-    { "speaker": "player", "text": "メモしました。" },
-    { "speaker": "director", "text": "では、次を見てみましょう。" }
-  ]
-}
-```
+章を開いた時から見せる会話は、表示したい位置へ条件なしの`dialogue`を置きます。依頼書より前へ置けば依頼書前に、後ろへ置けば読後に表示されます。調査メモの保存は会話や章の進行条件にしません。特定の設問進捗後だけ会話を見せる場合は、ブロックへ`visible_when`を付けます。
 
 設問内の正解後会話には`{"event": "question_solved"}`を使います。
 
@@ -156,7 +140,7 @@ chapters/
   "text": "調査用の端末です。",
   "link": {
     "label": "調査端末を開く",
-    "href": "http://127.0.0.1:6901/vnc.html?autoconnect=true"
+    "href": "http://127.0.0.1:6901/vnc.html?autoconnect=true&reconnect=true&reconnect_delay=5000"
   }
 }
 ```

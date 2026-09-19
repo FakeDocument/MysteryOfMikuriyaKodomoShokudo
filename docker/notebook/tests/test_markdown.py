@@ -24,7 +24,8 @@ class MarkdownRenderingTest(unittest.TestCase):
         )
         self.assertIn('output.push(`<pre><code${languageClass}>', markdown)
         self.assertIn("setMarkdown(copy, entry.text)", script)
-        self.assertIn('preview.dataset.role = "note-preview"', script)
+        self.assertNotIn('preview.dataset.role = "note-preview"', script)
+        self.assertNotIn("setMarkdown(preview", script)
         self.assertNotIn("https://cdn", template)
 
 
