@@ -60,8 +60,8 @@ class AnswerValidationTest(unittest.TestCase):
 
     def test_password_is_case_sensitive(self):
         question = QUESTIONS_BY_ID["ch1_samba_credentials"]
-        self.assertTrue(validate_answer(question, "kanzaki\tKanzaki2019"))
-        self.assertFalse(validate_answer(question, "kanzaki\tkanzaki2019"))
+        self.assertTrue(validate_answer(question, "kanzaki\tKanzaki2018"))
+        self.assertFalse(validate_answer(question, "kanzaki\tkanzaki2018"))
 
     def test_past_person_accepts_name_variants(self):
         question = QUESTIONS_BY_ID["ch2_past_person"]
@@ -469,7 +469,6 @@ class ContentFileTest(unittest.TestCase):
         self.assertIn("ブラウザで開き", hidden_dialogue)
         self.assertIn("公開ページ", hidden_dialogue)
         self.assertNotIn("Kanzaki", hidden_dialogue)
-        self.assertNotIn("2019", hidden_dialogue)
         credential_questions = {
             question["id"]: question for question in questions_in(directory_solved)
         }

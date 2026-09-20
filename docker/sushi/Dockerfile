@@ -12,7 +12,7 @@ COPY site/ /usr/share/nginx/html/
 COPY webmail/ /opt/mikuriya-webmail/
 COPY entrypoint.sh /entrypoint.sh
 RUN useradd --system --user-group --no-create-home --shell /usr/sbin/nologin kanzaki \
-    && printf '%s\n%s\n' 'Kanzaki2019' 'Kanzaki2019' | smbpasswd -a -s kanzaki \
+    && printf '%s\n%s\n' 'Kanzaki2018' 'Kanzaki2018' | smbpasswd -a -s kanzaki \
     && chown -R root:kanzaki /srv/samba/staff \
     && find /srv/samba/staff -type d -exec chmod 0750 {} + \
     && find /srv/samba/staff -type f -exec chmod 0640 {} + \

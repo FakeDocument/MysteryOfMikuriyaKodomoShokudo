@@ -44,7 +44,7 @@
     },
     "ch1_samba_credentials": {
       "accepted": [
-        "kanzaki\tKanzaki2019"
+        "kanzaki\tKanzaki2018"
       ],
       "validation": "exact",
       "incorrect_message": "アカウントIDの小文字表記と、初期パスワードの大文字・小文字・入社年をもう一度確認しよう。"

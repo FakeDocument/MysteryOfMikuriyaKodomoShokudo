@@ -72,7 +72,7 @@ def initialize_database() -> None:
     connection.executemany(
         "INSERT INTO users(email, display_name, password_hash) VALUES (?, ?, ?)",
         [
-            (KANZAKI_EMAIL, "神崎 仁美", password_digest("Kanzaki2019")),
+            (KANZAKI_EMAIL, "神崎 仁美", password_digest("Kanzaki2018")),
             (MIKURIYA_EMAIL, "御厨 岩男", password_digest("Iw40-N0t-Guessable")),
         ],
     )
