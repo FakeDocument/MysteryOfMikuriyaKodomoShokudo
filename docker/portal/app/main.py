@@ -383,9 +383,12 @@ def index(request: Request) -> HTMLResponse:
     user = current_user(request)
     if user is None:
         return templates.TemplateResponse(request, "login.html")
+    searched = "keyword" in request.query_params
     keyword = request.query_params.get("keyword", "")
     return templates.TemplateResponse(request, "catalog.html", {
-        "user": user, "keyword": keyword, "results": search_documents(keyword, user),
+        "user": user, "keyword": keyword,
+        "results": search_documents(keyword, user) if searched else [],
+        "searched": searched,
         "access_query": urlencode({"keyword": keyword}),
     })
 
@@ -433,6 +436,7 @@ async def search(request: Request) -> HTMLResponse:
     keyword = form.get("keyword", [""])[0]
     return templates.TemplateResponse(request, "catalog.html", {
         "results": search_documents(keyword, user), "keyword": keyword, "user": user,
+        "searched": True,
         "access_query": urlencode({"keyword": keyword}),
     })
 

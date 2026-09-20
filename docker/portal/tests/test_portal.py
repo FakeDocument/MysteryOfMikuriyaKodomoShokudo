@@ -63,6 +63,14 @@ class PortalTest(unittest.TestCase):
             main.document(self.request(cookie=cookie), 'transfer-settings')
         self.assertEqual(error.exception.status_code, 404)
 
+    def test_catalog_does_not_show_documents_before_search(self):
+        cookie = self.login()
+        landing = main.index(self.request(cookie=cookie))
+        self.assertNotIn('results-panel', landing.body.decode())
+
+        restored_search = main.index(self.request(query={'keyword': ''}, cookie=cookie))
+        self.assertIn('results-panel', restored_search.body.decode())
+
     def test_one_injection_reveals_restricted_documents(self):
         cookie = self.login()
         payload = "' OR 1=1 -- "
