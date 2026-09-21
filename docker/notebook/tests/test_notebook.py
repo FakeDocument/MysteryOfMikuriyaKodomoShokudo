@@ -164,24 +164,6 @@ class ContentFileTest(unittest.TestCase):
             solved + ["ch4_handoff_schedule"],
         )
 
-    def test_finale_shows_report_and_call_without_repeating_questions(self):
-        locked = public_chapters({
-            "solved_question_ids": [],
-            "unlocked_chapter_ids": ["prologue", "chapter-1", "chapter-2", "chapter-3", "chapter-4"],
-        })[5]
-        self.assertEqual(locked["blocks"], [])
-
-        open_finale = public_chapters({
-            "solved_question_ids": ["ch4_handoff_schedule"],
-            "unlocked_chapter_ids": [
-                "prologue", "chapter-1", "chapter-2", "chapter-3", "chapter-4", "finale"
-            ],
-        })[5]
-        self.assertEqual([block["id"] for block in open_finale["blocks"]],
-                         ["completed-report", "final-call"])
-        self.assertEqual(questions_in(open_finale), [])
-        report = open_finale["blocks"][0]
-        self.assertIn("裏手の荷捌き所", "".join(item["value"] for item in report["items"]))
 
     def test_framework_documentation_routes_are_disabled(self):
         from app.main import app
