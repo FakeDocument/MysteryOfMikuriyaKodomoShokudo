@@ -43,6 +43,7 @@
           },
           {
             "speaker": "player",
+            "expression": "exasperated",
             "text": "`Sharename`、`Type`、`Comment` という表が出ました。最後にSMB1へ接続できない、という表示もありますけど……失敗ですか？"
           },
           {
@@ -236,9 +237,10 @@
                   "title": "調査結果を受けて"
                 },
                 "messages": [
-                  {
-                    "speaker": "player",
-                    "text": "特別顧客は片柳修治。国土保全庁の……海域保全対策室、調整係長？ 寿司屋の顧客台帳に政府の人間が？それに『提供』『特別顧客』……って……"
+                    {
+                      "speaker": "player",
+                      "expression": "angry",
+                      "text": "特別顧客は片柳修治。国土保全庁の……海域保全対策室、調整係長？ 寿司屋の顧客台帳に政府の人間が？それに『提供』『特別顧客』……って……"
                   },
                   {
                     "speaker": "director",
@@ -306,11 +308,13 @@
                 "messages": [
                   {
                     "speaker": "player",
+                    "expression":"exasperated",
                     "text": "神崎の業務メールをIDにして、パスワードはSambaと同じ。……パスワードの使い回し、やらないようにします。"
                   },
-                  {
-                    "speaker": "director",
-                    "text": "ええ、そうする方が賢明でしょう。まあ、こちらとしては助かりますが。社内メールを覗いて、片柳との連絡を探してみましょう。"
+          {
+            "speaker": "director",
+            "expression": "deflecting",
+            "text": "ええ、そうする方が賢明でしょう。まあ、こちらとしては助かりますが。社内メールを覗いて、片柳との連絡を探してみましょう。"
                   }
                 ]
               }

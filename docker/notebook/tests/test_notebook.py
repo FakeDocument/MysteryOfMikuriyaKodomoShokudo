@@ -204,6 +204,49 @@ class ContentFileTest(unittest.TestCase):
             chapters, _ = load_content(temp_chapters / "manifest.json", ANSWERS_PATH)
             self.assertEqual(chapters[0]["blocks"][2]["messages"][0]["text"], "差し替えたセリフ")
 
+    def test_dialogue_expression_is_preserved_in_public_chapter_data(self):
+        chapters = public_chapters(
+            {"solved_question_ids": [], "unlocked_chapter_ids": ["prologue"]}
+        )
+        opening = block_of_type(chapters[0], "dialogue")
+        expressive_message = next(
+            message for message in opening["messages"] if "expression" in message
+        )
+        self.assertIn(
+            expressive_message["expression"],
+            {"angry", "deflecting", "exasperated"},
+        )
+
+    def test_dialogue_rejects_expression_for_another_speaker(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_chapters = Path(temp_dir) / "chapters"
+            shutil.copytree(CHAPTERS_MANIFEST_PATH.parent, temp_chapters)
+            chapter_path = temp_chapters / "chapter-1.json"
+            chapter_data = json.loads(chapter_path.read_text(encoding="utf-8"))
+            chapter_data["chapter"]["blocks"][0]["messages"][0]["expression"] = "deflecting"
+            chapter_path.write_text(
+                json.dumps(chapter_data, ensure_ascii=False), encoding="utf-8"
+            )
+
+            with self.assertRaisesRegex(ContentConfigurationError, "expression"):
+                load_content(temp_chapters / "manifest.json", ANSWERS_PATH)
+
+    def test_narrator_rejects_expression(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_chapters = Path(temp_dir) / "chapters"
+            shutil.copytree(CHAPTERS_MANIFEST_PATH.parent, temp_chapters)
+            chapter_path = temp_chapters / "chapter-1.json"
+            chapter_data = json.loads(chapter_path.read_text(encoding="utf-8"))
+            message = chapter_data["chapter"]["blocks"][0]["messages"][0]
+            message["speaker"] = "narrator"
+            message["expression"] = "normal"
+            chapter_path.write_text(
+                json.dumps(chapter_data, ensure_ascii=False), encoding="utf-8"
+            )
+
+            with self.assertRaisesRegex(ContentConfigurationError, "narrator"):
+                load_content(temp_chapters / "manifest.json", ANSWERS_PATH)
+
     def test_blocks_define_display_order_and_renderer(self):
         self.assertEqual(
             [block["type"] for block in CHAPTERS[0]["blocks"][:3]],

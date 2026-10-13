@@ -127,10 +127,26 @@ chapters/
 }
 ```
 
-セリフの`speaker`は次のどちらかです。
+セリフの`speaker`は次のいずれかです。
 
 - `director`: 所長。画面左側に表示
 - `player`: 主人公（あなた）。画面右側に表示
+- `katayanagi`: 片柳。画面左側に表示
+- `narrator`: 地の文。人物名・アイコン・吹き出しなしで表示
+
+人物の表情は、メッセージの任意の`expression`で指定します。省略時は各人物の`normal`を使います。`narrator`には指定できません。
+
+- `director`: `normal`, `deflecting`, `ceremonial_smile`, `ceremonial_serious`
+- `player`: `normal`, `exasperated`, `angry`
+- `katayanagi`: `normal`, `surprised`, `despair`
+
+```json
+{
+  "speaker": "player",
+  "expression": "angry",
+  "text": "笑真を迎えに行きましょう。"
+}
+```
 
 セリフの吹き出しから別画面を開かせる場合は、メッセージへ任意の`link`を追加できます。リンクは新しいタブで開き、`href`には`http`または`https`の完全なURLを指定します。
 

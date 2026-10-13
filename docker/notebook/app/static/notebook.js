@@ -8,6 +8,37 @@
     renderedDialogueKeys: new Set(),
   };
 
+  const dialogueSpeakers = {
+    director: {
+      name: "所長",
+      defaultExpression: "normal",
+      avatars: {
+        normal: "Sushi-ctf-所長-普段着-普段.png",
+        deflecting: "Sushi-ctf-所長-普段着-ごまかし.png",
+        ceremonial_smile: "Sushi-ctf-所長-浄衣-普段.png",
+        ceremonial_serious: "Sushi-ctf-所長-浄衣-真剣.png",
+      },
+    },
+    katayanagi: {
+      name: "片柳",
+      defaultExpression: "normal",
+      avatars: {
+        normal: "Sushi-ctf-片柳-普段.png",
+        surprised: "Sushi-ctf-片柳-驚き.png",
+        despair: "Sushi-ctf-片柳-絶望.png",
+      },
+    },
+    player: {
+      name: "あなた",
+      defaultExpression: "normal",
+      avatars: {
+        normal: "Sushi-ctf-主人公-普段.png",
+        exasperated: "Sushi-ctf-主人公-呆れ.png",
+        angry: "Sushi-ctf-主人公-怒り.png",
+      },
+    },
+  };
+
   const elements = {
     tabs: document.querySelector("#chapter-tabs"),
     title: document.querySelector("#chapter-title"),
@@ -100,17 +131,29 @@
 
   function createDialogue(entry, animate) {
     const row = document.createElement("article");
-    row.className = `dialogue-row ${entry.speaker === "player" ? "is-player" : "is-director"}`;
+    if (entry.speaker === "narrator") {
+      row.className = "dialogue-row is-narrator";
+      if (animate) row.classList.add("is-new");
+      const copy = document.createElement("div");
+      copy.className = "narration-copy";
+      setMarkdown(copy, entry.text);
+      row.append(copy);
+      return row;
+    }
+
+    const speaker = dialogueSpeakers[entry.speaker];
+    const expression = entry.expression || speaker.defaultExpression;
+    const avatarFile = speaker.avatars[expression];
+    row.className = `dialogue-row is-${entry.speaker}`;
+    row.dataset.expression = expression;
     if (animate) row.classList.add("is-new");
 
-    const speakerName = entry.speaker === "player" ? "あなた" : "所長";
-    const avatarFile = entry.speaker === "player" ? "avatar-player.png" : "avatar-director.png";
     row.innerHTML = `
       <div class="avatar-wrap" aria-hidden="true">
-        <img src="/static/images/${avatarFile}" alt="">
+        <img src="/static/images/${avatarFile}" alt="" width="128" height="128">
       </div>
       <div class="dialogue-body">
-        <span class="speaker-name">${speakerName}</span>
+        <span class="speaker-name">${speaker.name}</span>
         <div class="dialogue-copy"></div>
       </div>
     `;

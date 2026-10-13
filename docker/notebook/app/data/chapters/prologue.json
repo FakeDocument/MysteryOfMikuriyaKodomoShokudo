@@ -26,10 +26,12 @@
           },
           {
             "speaker": "player",
+            "expression": "exasperated",
             "text": "所長がごちそうしてくれるなんて珍しいですね。……何か企んでません？"
           },
           {
             "speaker": "director",
+            "expression": "deflecting",
             "text": "失礼ですね。たまには部下を労うこともあります。それに、この店には少々興味がありまして。"
           },
           {
@@ -42,10 +44,12 @@
           },
           {
             "speaker": "player",
+            "expression": "exasperated",
             "text": "なんだ、感心してるだけですか。てっきりまた、怪しげな裏でもあるのかと。"
           },
           {
             "speaker": "director",
+            "expression": "deflecting",
             "text": "人聞きの悪いことを言いますね。……では、こちらもどうぞ。今朝、事務所の郵便受けに届いていました。"
           },
           {

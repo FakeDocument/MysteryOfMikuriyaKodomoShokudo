@@ -31,14 +31,17 @@
           },
           {
             "speaker": "player",
+            "expression": "exasperated",
             "text": "ハッキング……って、それ、犯罪じゃないですか！？"
           },
           {
             "speaker": "director",
+            "expression": "deflecting",
             "text": "おやおや。子どもの命がかかっているかもしれないというのに、ずいぶん細かいことを気にしますね。"
           },
           {
             "speaker": "player",
+            "expression": "exasperated",
             "text": "うっ……！"
           },
           {
@@ -60,6 +63,7 @@
           },
           {
             "speaker": "player",
+            "expression": "exasperated",
             "text": "最初からやらせる気だったんじゃないですか。……分かりましたよ。やります。"
           },
           {
@@ -211,9 +215,10 @@
                     "speaker": "player",
                     "text": "もう一つは、445番ポートの netbios-ssn です。後ろには Samba smbd 4 とも出ています。"
                   },
-                  {
-                    "speaker": "director",
-                    "text": "そのSambaは、ネットワーク越しにサーバーの共有フォルダやファイルを使えるようにするファイル共有サービスです。おやおや。魚だけでなく、ファイルも共有しているようですね。ただし共有フォルダには鍵がかかっているようです。"
+                    {
+                      "speaker": "director",
+                      "expression": "deflecting",
+                      "text": "そのSambaは、ネットワーク越しにサーバーの共有フォルダやファイルを使えるようにするファイル共有サービスです。おやおや。魚だけでなく、ファイルも共有しているようですね。ただし共有フォルダには鍵がかかっているようです。"
                   }
                 ]
               }
@@ -271,6 +276,7 @@
           },
           {
             "speaker": "player",
+            "expression": "exasperated",
             "text": "……いくつか出ました。これ、全部が隠しページなんですか？"
           },
           {
@@ -385,10 +391,12 @@
           },
           {
             "speaker": "player",
+            "expression": "exasperated",
             "text": "ああ！でも、パスワード変えちゃってるんじゃないですか？"
           },
           {
             "speaker": "director",
+            "expression": "deflecting",
             "text": "もちろん、その可能性はあります。ですが、試してみる価値はあると思いますよ。"
           }
         ]

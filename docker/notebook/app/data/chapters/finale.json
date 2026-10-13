@@ -68,6 +68,7 @@
           },
           {
             "speaker": "player",
+            "expression": "angry",
             "text": "はい。笑真を迎えに行きましょう。"
           }
         ]

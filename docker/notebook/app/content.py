@@ -18,10 +18,33 @@ ANSWERS_PATH = DATA_DIR / "answers.json"
 STATIC_IMAGES_DIR = Path(__file__).parent / "static" / "images"
 ANSWER_ONLY_KEYS = {"accepted", "validation", "required_terms", "incorrect_message"}
 ALLOWED_VALIDATIONS = {"one_of", "exact", "contains_all"}
-ALLOWED_SPEAKERS = {"director", "player"}
+ALLOWED_SPEAKERS = {"director", "katayanagi", "narrator", "player"}
 ALLOWED_VISIBILITY_EVENTS = {"question_solved", "questions_solved"}
 ALLOWED_TOP_LEVEL_BLOCKS = {"dialogue", "document", "evidence_note", "questions", "report"}
 ALLOWED_QUESTION_BLOCKS = {"hints", "dialogue"}
+DIALOGUE_DEFAULT_EXPRESSIONS = {
+    "director": "normal",
+    "katayanagi": "normal",
+    "player": "normal",
+}
+DIALOGUE_AVATARS = {
+    "director": {
+        "normal": "Sushi-ctf-所長-普段着-普段.png",
+        "deflecting": "Sushi-ctf-所長-普段着-ごまかし.png",
+        "ceremonial_smile": "Sushi-ctf-所長-浄衣-普段.png",
+        "ceremonial_serious": "Sushi-ctf-所長-浄衣-真剣.png",
+    },
+    "katayanagi": {
+        "normal": "Sushi-ctf-片柳-普段.png",
+        "surprised": "Sushi-ctf-片柳-驚き.png",
+        "despair": "Sushi-ctf-片柳-絶望.png",
+    },
+    "player": {
+        "normal": "Sushi-ctf-主人公-普段.png",
+        "exasperated": "Sushi-ctf-主人公-呆れ.png",
+        "angry": "Sushi-ctf-主人公-怒り.png",
+    },
+}
 DIALOGUE_IMAGE_PATH = re.compile(
     r"^/static/images/[a-z0-9][a-z0-9._-]*\.(?:png|jpe?g|webp)$"
 )
@@ -72,8 +95,31 @@ def _validate_dialogue(messages: Any, location: str) -> None:
             raise ContentConfigurationError(f"{item_location} はオブジェクトにしてください。")
         if item.get("speaker") not in ALLOWED_SPEAKERS:
             raise ContentConfigurationError(
-                f"{item_location}.speaker は director または player にしてください。"
+                f"{item_location}.speaker は director・katayanagi・narrator・player "
+                "のいずれかにしてください。"
             )
+        speaker = item["speaker"]
+        expression = item.get("expression")
+        if speaker == "narrator":
+            if expression is not None:
+                raise ContentConfigurationError(
+                    f"{item_location}.expression は narrator には指定できません。"
+                )
+        else:
+            if expression is not None:
+                _require_text(expression, f"{item_location}.expression")
+            resolved_expression = expression or DIALOGUE_DEFAULT_EXPRESSIONS[speaker]
+            available_expressions = DIALOGUE_AVATARS[speaker]
+            if resolved_expression not in available_expressions:
+                raise ContentConfigurationError(
+                    f"{item_location}.expression は "
+                    f"{'・'.join(sorted(available_expressions))} のいずれかにしてください。"
+                )
+            avatar_path = STATIC_IMAGES_DIR / available_expressions[resolved_expression]
+            if not avatar_path.is_file():
+                raise ContentConfigurationError(
+                    f"{item_location} の会話アイコンが見つかりません: {avatar_path.name}"
+                )
         _require_text(item.get("text"), f"{item_location}.text")
         if "link" in item:
             link = item["link"]
