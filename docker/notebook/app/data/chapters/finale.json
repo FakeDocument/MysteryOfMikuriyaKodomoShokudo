@@ -54,7 +54,30 @@
             "id": "finale_purpose",
             "label": "最終確認 01",
             "prompt": "子どもたちは何のために引き渡されるのか？",
-            "blocks": [],
+            "blocks": [
+              {
+                "type": "dialogue",
+                "id": "follow-up",
+                "visible_when": {
+                  "event": "question_solved"
+                },
+                "heading": {
+                  "kicker": "FOLLOW-UP",
+                  "title": "調査結果のおさらい"
+                },
+                "messages": [
+                  {
+                    "speaker": "player",
+                    "expression": "serious",
+                    "text": "子どもたちは島を喰らう怪異……オオクチ様の生贄として捧げられていました"
+                  },
+                  {
+                    "speaker": "director",
+                    "text": "怪異から沖ノ鳥島……ひいてはそれがもたらす海域を守るため生贄を捧げていたと……"
+                  }
+                ]
+              }
+            ],
             "answer_fields": [
               {
                 "id": "offering",
@@ -75,29 +98,44 @@
             "id": "finale_selection",
             "label": "最終確認 02",
             "prompt": "御厨水産が狙い、連れ去った子どもたちにはどのような共通点があった？",
-            "blocks": [],
+            "blocks": [
+              {
+                "type": "dialogue",
+                "id": "follow-up",
+                "visible_when": {
+                  "event": "question_solved"
+                },
+                "heading": {
+                  "kicker": "FOLLOW-UP",
+                  "title": "調査結果のおさらい"
+                },
+                "messages": [
+                  {
+                    "speaker": "player",
+                    "expression": "serious",
+                    "text": "居なくなっても騒ぎにならない、肉付きのいい子どもです"
+                  },
+                  {
+                    "speaker": "director",
+                    "text": "生贄として都合のいい子どもを見繕っていたのですね"
+                  }
+                ]
+              }
+            ],
             "answer_fields": [
               {
                 "id": "isolation",
                 "label": "家庭・交友関係",
                 "placeholder": "共通点",
                 "input_mode": "select",
-                "options": [
-                  "孤立している",
-                  "良好",
-                  "不明"
-                ]
+                "options": ["孤立している", "良好", "不明"]
               },
               {
                 "id": "build",
                 "label": "肉付き",
                 "placeholder": "共通点",
                 "input_mode": "select",
-                "options": [
-                  "貧相",
-                  "良い",
-                  "不明"
-                ]
+                "options": ["貧相", "良い", "不明"]
               }
             ]
           },
@@ -106,7 +144,30 @@
             "id": "finale_target",
             "label": "最終確認 03",
             "prompt": "今回、供物として選定されてしまった標的は誰か？",
-            "blocks": [],
+            "blocks": [
+              {
+                "type": "dialogue",
+                "id": "follow-up",
+                "visible_when": {
+                  "event": "question_solved"
+                },
+                "heading": {
+                  "kicker": "FOLLOW-UP",
+                  "title": "調査結果のおさらい"
+                },
+                "messages": [
+                  {
+                    "speaker": "player",
+                    "expression": "serious",
+                    "text": "今年選ばれたのは佐々木笑真さんでした"
+                  },
+                  {
+                    "speaker": "director",
+                    "text": "美咲さんからの依頼がなければ、誰にも知られず消えていたでしょうね"
+                  }
+                ]
+              }
+            ],
             "placeholder": "氏名",
             "input_mode": "text"
           },
@@ -115,7 +176,30 @@
             "id": "finale_handoff",
             "label": "最終確認 04",
             "prompt": "笑真の引き渡しが行われる具体的な日時と場所は？",
-            "blocks": [],
+            "blocks": [
+              {
+                "type": "dialogue",
+                "id": "follow-up",
+                "visible_when": {
+                  "event": "question_solved"
+                },
+                "heading": {
+                  "kicker": "FOLLOW-UP",
+                  "title": "調査結果のおさらい"
+                },
+                "messages": [
+                  {
+                    "speaker": "player",
+                    "expression": "serious",
+                    "text": "あと1時間20分……時間がありません"
+                  },
+                  {
+                    "speaker": "director",
+                    "text": "ええ。急がなければ。ですが、まだ間に合う時間です。まずは落ち着くことです"
+                  }
+                ]
+              }
+            ],
             "answer_fields": [
               {
                 "id": "datetime",
@@ -128,11 +212,7 @@
                 "label": "場所",
                 "placeholder": "受入口名",
                 "input_mode": "select",
-                "options":[
-                  "裏手の荷捌き所",
-                  "正面玄関",
-                  "漁港"
-                ]
+                "options": ["裏手の荷捌き所", "正面玄関", "漁港"]
               }
             ]
           }
@@ -213,7 +293,7 @@
           },
           {
             "speaker": "director",
-            "expression":"deflecting",
+            "expression": "deflecting",
             "text": "国の未来と、名もなき少女の命。秤にかけるにはあまりに不釣り合いです。……さあ、どうしますか？ それでもキミは、介入するつもりですか？"
           },
           {
@@ -300,12 +380,12 @@
           {
             "speaker": "katayanagi",
             "text": "……黙れ……！",
-            "expression":"angry"
+            "expression": "angry"
           },
           {
             "speaker": "katayanagi",
             "text": "誰かにとっての全てかもしれない？そんなこと百も承知だ！！命の尊さを俺が知らないと思ったか！！？？\nだが！！ 誰かが泥を被らねば、この国は根底から腐り落ちるんだ！ 私は……私はこの国家の領土を守る責任者だ！ 結果から逃げるわけにはいかないんだよ！\nじゃあなんだ！？貴様には策があるのか！？それともお前が死んでみるか！？まだ若いしいけるかもな！！",
-            "expression":"angry"
+            "expression": "angry"
           },
           {
             "speaker": "narrator",
@@ -377,7 +457,7 @@
           },
           {
             "speaker": "player",
-            "expression":"angry",
+            "expression": "angry",
             "text": "くっ……ぐあぁぁぁっ！"
           },
           {
@@ -385,9 +465,9 @@
             "text": "海の叫びと、自分の心拍音が混ざり合う。所長の指先があなたの胸に深々と沈み込み、荒れ狂う異形の力を力ずくで押し込んでいく。感覚が引き裂かれ、意識が急速に遠のいていく中で、あなたは最後に嵐が止む気配を感じた――。\n\n\n\n静かな夜だ。雲ひとつない空、穏やかな風。そして、穏やかな海が見渡す限りの水平線を埋めている。\n片柳は端末を開き、観測値を確認する。オールグリーン。全てが正常値を示していた。\n\n端末を握ったまま、崩れそうになる膝を辛うじて保ち、夜の水平線をただ呆然と見つめ続ける。差し出された命、費やされた歳月、そのすべてを背負った男の口から、それ以上の言葉が出ることはなかった。"
           },
           {
-            "speaker":"katayanagi",
-            "text":"……",
-            "expression":"despair"
+            "speaker": "katayanagi",
+            "text": "……",
+            "expression": "despair"
           }
         ],
         "visible_when": {
