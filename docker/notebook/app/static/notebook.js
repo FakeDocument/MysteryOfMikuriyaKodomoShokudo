@@ -383,7 +383,9 @@
     const hasDateTime = question.answer_fields.some((field) => field.input_mode === "datetime");
     const fields = question.answer_fields.map((field, index) => {
       const isDateTime = field.input_mode === "datetime";
-      const value = isDateTime ? dateTimeInputValue(values[index] || "", chapterDate) : values[index] || "";
+      const value = isDateTime
+        ? dateTimeInputValue(values[index] || "", chapterDate) || "2026-09-11T00:00"
+        : values[index] || "";
       if (field.input_mode === "select") {
         // Preserve answers saved before a text field was converted to a select.
         const options = value && !field.options.includes(value) ? [value, ...field.options] : field.options;
