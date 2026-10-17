@@ -5,18 +5,138 @@
     "number": "終",
     "nav_title": "調査報告書",
     "title": "調査報告書",
-    "date": "2026年9月10日 23時30分",
+    "date": "2026年9月10日 23時40分",
     "eyebrow": "FINAL REPORT",
-    "status_label": "報告完了",
+    "status_label": "最終確認",
     "available": true,
     "objective": "調査で判明した事実を報告書にまとめ、笑真の保護へ動き出す。",
     "lead": "引き渡しの日時と場所が分かった。調査ノートの最後のページを開く。",
     "blocks": [
       {
+        "type": "dialogue",
+        "id": "final-call",
+        "heading": {
+          "number": "01",
+          "kicker": "CONVERSATION LOG",
+          "title": "所長からの電話"
+        },
+        "messages": [
+          {
+            "speaker": "narrator",
+            "text": "深夜二十三時四十分。デスクの上に置いていたスマートフォンが、振動と共に電子音を打ち鳴らした。\n\n画面に表示された『所長』の文字をタップし、耳にあてる。雑音の向こうから、いつもの悠々とした声が聞こえてきた。"
+          },
+          {
+            "speaker": "director",
+            "text": "お疲れ様です。そろそろ、調査の結果が出た頃ではないかと思いまして"
+          },
+          {
+            "speaker": "player",
+            "text": "所長！ちょうどよかった！急がないと！！笑真さんが！！！"
+          },
+          {
+            "speaker": "director",
+            "text": "落ち着いてください。急ぐ必要はあります。ですが、その前に一度だけ整理しておきましょう。キミが見つけたものを、順番に教えてください"
+          }
+        ]
+      },
+      {
+        "type": "questions",
+        "id": "final-verification",
+        "heading": {
+          "number": "02",
+          "kicker": "FINAL CHECK",
+          "title": "情報整理"
+        },
+        "items": [
+          {
+            "type": "question",
+            "id": "finale_purpose",
+            "label": "最終確認 01",
+            "prompt": "子どもたちは何のために引き渡されるのか？",
+            "blocks": [],
+            "answer_fields": [
+              {
+                "id": "offering",
+                "label": "供物を捧げる相手",
+                "placeholder": "名称",
+                "input_mode": "text"
+              },
+              {
+                "id": "purpose",
+                "label": "保全する島",
+                "placeholder": "島名",
+                "input_mode": "text"
+              }
+            ]
+          },
+          {
+            "type": "question",
+            "id": "finale_selection",
+            "label": "最終確認 02",
+            "prompt": "御厨水産が狙い、連れ去った子どもたちにはどのような共通点があった？",
+            "blocks": [],
+            "answer_fields": [
+              {
+                "id": "isolation",
+                "label": "家庭・交友関係",
+                "placeholder": "共通点",
+                "input_mode": "select",
+                "options": [
+                  "孤立している",
+                  "良好",
+                  "不明"
+                ]
+              },
+              {
+                "id": "build",
+                "label": "肉付き",
+                "placeholder": "共通点",
+                "input_mode": "select",
+                "options": [
+                  "貧相",
+                  "良い",
+                  "不明"
+                ]
+              }
+            ]
+          },
+          {
+            "type": "question",
+            "id": "finale_target",
+            "label": "最終確認 03",
+            "prompt": "今回、供物として選定されてしまった標的は誰か？",
+            "blocks": [],
+            "placeholder": "氏名",
+            "input_mode": "text"
+          },
+          {
+            "type": "question",
+            "id": "finale_handoff",
+            "label": "最終確認 04",
+            "prompt": "笑真の引き渡しが行われる具体的な日時と場所は？",
+            "blocks": [],
+            "answer_fields": [
+              {
+                "id": "datetime",
+                "label": "日時",
+                "placeholder": "日時",
+                "input_mode": "datetime-local"
+              },
+              {
+                "id": "place",
+                "label": "場所",
+                "placeholder": "受入口名",
+                "input_mode": "text"
+              }
+            ]
+          }
+        ]
+      },
+      {
         "type": "report",
         "id": "completed-report",
         "heading": {
-          "number": "01",
+          "number": "03",
           "kicker": "FINAL REPORT",
           "title": "完成した調査報告書"
         },
@@ -47,31 +167,430 @@
             "value": "御厨水産・裏手の荷捌き所"
           }
         ],
-        "conclusion": "政府側への引き渡し前に、佐々木笑真を保護する必要がある。"
+        "conclusion": "政府側への引き渡し前に、佐々木笑真を保護する必要がある。",
+        "visible_when": {
+          "event": "questions_solved",
+          "question_ids": [
+            "finale_purpose",
+            "finale_selection",
+            "finale_target",
+            "finale_handoff"
+          ]
+        }
       },
       {
         "type": "dialogue",
-        "id": "final-call",
+        "id": "decision",
         "heading": {
-          "number": "02",
-          "kicker": "INCOMING CALL",
-          "title": "所長からの電話"
+          "number": "04",
+          "kicker": "CONVERSATION LOG",
+          "title": "深夜の画面"
         },
         "messages": [
           {
+            "speaker": "director",
+            "text": "素晴らしいですね。完璧な整理です。……ええ、なるほど。国家の基盤たる海域を守るため、誰にも気づかれない子どもが人身御供として削られてきた……というわけですか"
+          },
+          {
             "speaker": "player",
-            "text": "……電話だ。所長？ 報告書ができました。笑真の引き渡しは9月11日午前1時、御厨水産の裏手の荷捌き所です。"
+            "text": "……本当に、そんな理屈が通っていいはずがない",
+            "expression": "serious"
           },
           {
             "speaker": "director",
-            "text": "分かりました。間に合います。キミはその報告書を持って来てください。私も向かいます。"
+            "text": "ですが、現実に沖ノ鳥島周辺の異常な侵食は、その『供物』によって抑え込まれています。もし今夜、キミが介入して佐々木笑真ちゃんを救出すれば……儀式は失敗し、オオクチ様の怒りによって沖ノ鳥島は海に沈むかもしれない。日本の排他的経済水域は広大な面積を失うことになります"
           },
           {
             "speaker": "player",
-            "expression": "angry",
-            "text": "はい。笑真を迎えに行きましょう。"
+            "text": "……っ",
+            "expression": "serious"
+          },
+          {
+            "speaker": "director",
+            "expression":"deflecting",
+            "text": "国の未来と、名もなき少女の命。秤にかけるにはあまりに不釣り合いです。……さあ、どうしますか？ それでもキミは、介入するつもりですか？"
+          },
+          {
+            "speaker": "player",
+            "text": "……迷わないと言ったら嘘になります。でも……子ども一人の命を潰して踏み台にするような国の未来なんて、クソくらえだ。僕は笑真ちゃんを助けます",
+            "expression": "serious"
+          },
+          {
+            "speaker": "director",
+            "text": "ふむ……実にキミらしい、青くさい回答ですね。ですが――私はそういう選択をする人間、嫌いじゃありませんよ"
+          },
+          {
+            "speaker": "player",
+            "text": "所長……？"
+          },
+          {
+            "speaker": "director",
+            "text": "覚悟はいいですね？ 荷捌き所へ向かいなさい。言ったでしょう、私は『神懸かり』です。キミが覚悟を示したなら、私も私の仕事をするとしましょう"
+          },
+          {
+            "speaker": "narrator",
+            "text": "通話が切れた。あなたはスマートフォンをポケットに押し込み、深夜の街へと駆け出した。"
           }
-        ]
+        ],
+        "visible_when": {
+          "event": "questions_solved",
+          "question_ids": [
+            "finale_purpose",
+            "finale_selection",
+            "finale_target",
+            "finale_handoff"
+          ]
+        }
+      },
+      {
+        "type": "dialogue",
+        "id": "confrontation",
+        "heading": {
+          "number": "05",
+          "kicker": "CONVERSATION LOG",
+          "title": "荷捌き所の対峙"
+        },
+        "messages": [
+          {
+            "speaker": "narrator",
+            "text": "二〇二六年九月十一日、午前零時五十分。\n御厨水産の裏手に位置する荷捌き所には、潮風と生臭い魚油の匂いが立ち込めていた。水銀灯の蒼白い光の下、ブルーシートで包まれた人間大の荷物が車に積み込まれようとしていた。\n傍には黒いスーツの男が立っている。\n海域保全対策室の責任者・片柳修治。"
+          },
+          {
+            "speaker": "katayanagi",
+            "text": "ここは関係者以外立ち入り禁止だぞ"
+          },
+          {
+            "speaker": "player",
+            "text": "佐々木笑真さんを捜しに来ました",
+            "expression": "serious"
+          },
+          {
+            "speaker": "katayanagi",
+            "text": "そうか。それなら、なぜここに？\n我々はただマグロを運搬に来ただけだよ。さあ、帰ってくれ"
+          },
+          {
+            "speaker": "player",
+            "text": "ふざけるな！孤立した子供をオオクチ様に捧げて、ちっぽけな岩ひとつを守ろうと言うんだろう！？",
+            "expression": "angry"
+          },
+          {
+            "speaker": "katayanagi",
+            "text": "……はあ……どこで漏れたのやら。だからセキュリティを強化しろと言ったのに\n分かっていないのは君のほうだ。そのちっぽけな岩がこの国にどれほどの領海をもたらしていると思う？どれだけの生活を支えているか知っているのか、考えたことがあるか？この国土が失われれば、漁業権も、海底資源も、防衛の要もすべて消え去る。 数十万、数百万人という国民の生活と安全が危険に晒される。\n一人の犠牲でそれらが保たれるのなら、秤にかけるまでもない。違うか？"
+          },
+          {
+            "speaker": "player",
+            "text": "それが子どもを犠牲にしていい理由になるか！どんな理屈があろうと、間違っている！",
+            "expression": "angry"
+          },
+          {
+            "speaker": "katayanagi",
+            "text": "我々だって、手は尽くしている。その上で、今の方法が最良だと判断したのだ。我々には国民の生活を守る義務と責任がある。\n現場を知らない部外者が、代案もなく犠牲だけを非難するのは無責任ではないかね？"
+          },
+          {
+            "speaker": "player",
+            "text": "そんな犠牲の上で成り立つ生活なんて、クソ喰らえだ\n国家のため、全体のためと言って、どれだけの子どもを捧げるつもりだ？ 1人を救えば国が困る？ その1人は、誰かにとっての全てかもしれないのに！ こんな異常なやり方を、いつまで続けるつもりだ！？",
+            "expression": "angry"
+          },
+          {
+            "speaker": "katayanagi",
+            "text": "……黙れ……！",
+            "expression":"angry"
+          },
+          {
+            "speaker": "katayanagi",
+            "text": "誰かにとっての全てかもしれない？そんなこと百も承知だ！！命の尊さを俺が知らないと思ったか！！？？\nだが！！ 誰かが泥を被らねば、この国は根底から腐り落ちるんだ！ 私は……私はこの国家の領土を守る責任者だ！ 結果から逃げるわけにはいかないんだよ！\nじゃあなんだ！？貴様には策があるのか！？それともお前が死んでみるか！？まだ若いしいけるかもな！！",
+            "expression":"angry"
+          },
+          {
+            "speaker": "narrator",
+            "text": "片柳の手が、あなたの襟を掴む。その時だった。"
+          }
+        ],
+        "visible_when": {
+          "event": "questions_solved",
+          "question_ids": [
+            "finale_purpose",
+            "finale_selection",
+            "finale_target",
+            "finale_handoff"
+          ]
+        }
+      },
+      {
+        "type": "dialogue",
+        "id": "sealing",
+        "heading": {
+          "number": "06",
+          "kicker": "CONVERSATION LOG",
+          "title": "神懸かりと檻"
+        },
+        "messages": [
+          {
+            "speaker": "narrator",
+            "text": "午前一時ちょうど。\n\n荷捌き所の空気が、目に見えて重く澱んだ。水銀灯の光が引き延ばされたように歪み、潮騒の音が完全に途絶える。無音の世界。"
+          },
+          {
+            "speaker": "director",
+            "text": "間に合いましたね",
+            "expression": "ceremonial_serious"
+          },
+          {
+            "speaker": "narrator",
+            "text": "唐突に、片柳とあなたの中間に男が立っていた。所長だ。\n\n片柳が息を呑み、懐へ手を伸ばそうとした瞬間、所長は静かに片手を掲げた。\nバチッ、と鼓膜を叩くような空間の剥離音が響く。視界が白濁し、強烈な浮遊感が全身を襲った。\n\n次の瞬間、灯りが消えた。否、月明かりだ。月明かりだけが周囲を照らしている。小さな岩と、それを囲むコンクリート。そして、黒くうねる狂乱の海を。\n空には雲ひとつなく、風は穏やかそのものだ。しかし、海だけが轟々と黒く盛り上がっていた。今にでも島を飲み込もうとするかのように。"
+          },
+          {
+            "speaker": "katayanagi",
+            "text": "ここは……沖ノ鳥島……！？",
+            "expression": "surprised"
+          },
+          {
+            "speaker": "narrator",
+            "text": "片柳が悲鳴に近い声をあげ、周囲を見渡す。傍にはブルーシートから解放され、眠っている笑真がいた。"
+          },
+          {
+            "speaker": "director",
+            "text": "片柳さん、笑真さんを頼みます。我々は今から、オオクチ様を鎮めます\nキミ",
+            "expression": "ceremonial_serious"
+          },
+          {
+            "speaker": "narrator",
+            "text": "所長が振り返る。その顔からいつもの瓢箪のような笑みが消え、厳格な『能力者』の貌（かお）があった。額にはうっすらと汗が滲み、呼吸が荒い。これほどの超常の術、所長にとっても無負担であるはずがない。"
+          },
+          {
+            "speaker": "director",
+            "text": "オオクチ様は概念に近い怪異です。消滅させることはできない。ですが……キミの身体を『檻』として、封印することならできます。当然、相応の苦痛を伴い、命の保証もありません。……受け入れる覚悟はありますか？",
+            "expression": "ceremonial_serious"
+          },
+          {
+            "speaker": "player",
+            "text": "……やってください！"
+          },
+          {
+            "speaker": "narrator",
+            "text": "所長があなたの胸元に手を当て、何かを唱えた。\n瞬間、全身の血液が沸騰したかのような激痛が走った。口から悲鳴すら出ない。視界が真っ赤に染まる。海が浮く。影が渦をなし、あなたの胸元へと落ち込んでいく。"
+          },
+          {
+            "speaker": "player",
+            "expression":"angry",
+            "text": "くっ……ぐあぁぁぁっ！"
+          },
+          {
+            "speaker": "narrator",
+            "text": "海の叫びと、自分の心拍音が混ざり合う。所長の指先があなたの胸に深々と沈み込み、荒れ狂う異形の力を力ずくで押し込んでいく。感覚が引き裂かれ、意識が急速に遠のいていく中で、あなたは最後に嵐が止む気配を感じた――。\n\n\n\n静かな夜だ。雲ひとつない空、穏やかな風。そして、穏やかな海が見渡す限りの水平線を埋めている。\n片柳は端末を開き、観測値を確認する。オールグリーン。全てが正常値を示していた。\n\n端末を握ったまま、崩れそうになる膝を辛うじて保ち、夜の水平線をただ呆然と見つめ続ける。差し出された命、費やされた歳月、そのすべてを背負った男の口から、それ以上の言葉が出ることはなかった。"
+          },
+          {
+            "speaker":"katayanagi",
+            "text":"……",
+            "expression":"despair"
+          }
+        ],
+        "visible_when": {
+          "event": "questions_solved",
+          "question_ids": [
+            "finale_purpose",
+            "finale_selection",
+            "finale_target",
+            "finale_handoff"
+          ]
+        }
+      },
+      {
+        "type": "dialogue",
+        "id": "awakening",
+        "heading": {
+          "number": "07",
+          "kicker": "CONVERSATION LOG",
+          "title": "一週間後の覚醒"
+        },
+        "messages": [
+          {
+            "speaker": "narrator",
+            "text": "規則的な心電図の電子音が耳に届いた。\n\n消毒液の匂い。白い天井。ゆっくりと目を開けると、点滴のチューブが腕に繋がれているのが見えた。"
+          },
+          {
+            "speaker": "player",
+            "text": "……ん……あ……"
+          },
+          {
+            "speaker": "director",
+            "text": "おや、目が覚めましたか。実に一週間ぶりですね"
+          },
+          {
+            "speaker": "narrator",
+            "text": "枕元に視線を向けると、パイプ椅子に座った所長が文庫本を伏せたところだった。"
+          },
+          {
+            "speaker": "player",
+            "text": "……所長？ ここは……"
+          },
+          {
+            "speaker": "director",
+            "text": "病院の一般個室ですよ。昨日までICU（集中治療室）に入っていましてね。医者も『何が原因でこれほど衰弱しているのか分からない』と首を傾げていましたよ"
+          },
+          {
+            "speaker": "narrator",
+            "text": "所長は飄々とした調子で言いながら、お茶のペットボトルをあなたの口元へ運んでくれた。喉を潤すと、途切れていた記憶が急速に繋がっていく。"
+          },
+          {
+            "speaker": "player",
+            "text": "笑真ちゃんは……！？ 沖ノ鳥島は……！"
+          },
+          {
+            "speaker": "director",
+            "text": "安心しなさい。笑真ちゃんはかすり傷ひとつなく、警察を通じて無事に保護されました。そして……沖ノ鳥島周辺の異常侵食も完全に停止しました。キミが『檻』となったおかげでね"
+          },
+          {
+            "speaker": "player",
+            "text": "じゃあ……島は失われずに済んだんですね"
+          },
+          {
+            "speaker": "director",
+            "text": "ええ。二者択一を拒んだキミが覚悟を示したからこそ、私が用意した『第三の道』が繋がったのです"
+          },
+          {
+            "speaker": "narrator",
+            "text": "所長は少しだけ表情を和らげ、それから静かに窓の外へ視線を向けた。"
+          },
+          {
+            "speaker": "director",
+            "text": "全てが綺麗に、とはいきませんが\n彼ら海域保全対策室の不法な手続きは無かったことになりました。元々が超法規的な組織ですから"
+          },
+          {
+            "speaker": "narrator",
+            "text": "所長が語り出す。今回の事件は、家出として処理されること。御厨水産は一時休業し、その後の処遇について様々な議論が交わされていること。\n\nそして、片柳が失踪したこと。\n\n所長があなたに目をやる。"
+          },
+          {
+            "speaker": "director",
+            "text": "ですが、二度と子どもが捧げられることもありません。……もっとも、キミの体内に眠るオオクチ様が目覚めないよう、定期的に私がメンテナンスをしなければなりませんがね"
+          }
+        ],
+        "visible_when": {
+          "event": "questions_solved",
+          "question_ids": [
+            "finale_purpose",
+            "finale_selection",
+            "finale_target",
+            "finale_handoff"
+          ]
+        }
+      },
+      {
+        "type": "dialogue",
+        "id": "return-to-office",
+        "heading": {
+          "number": "08",
+          "kicker": "CONVERSATION LOG",
+          "title": "小さな依頼の終わり"
+        },
+        "messages": [
+          {
+            "speaker": "narrator",
+            "text": "退院の日。九十九探偵事務所には、暖かな日差しが差し込んでいた。\n\n体調はすっかり回復したものの、胸の奥にはまだ重く冷たい感覚が静かに残っている。だが、それは自分が救った命の証でもあった。\n\nデスクに腰掛け、パソコンを開こうとすると傍に手紙があることに気付く。"
+          }
+        ],
+        "visible_when": {
+          "event": "questions_solved",
+          "question_ids": [
+            "finale_purpose",
+            "finale_selection",
+            "finale_target",
+            "finale_handoff"
+          ]
+        }
+      },
+      {
+        "type": "document",
+        "id": "misaki-letter",
+        "visible_when": {
+          "event": "questions_solved",
+          "question_ids": [
+            "finale_purpose",
+            "finale_selection",
+            "finale_target",
+            "finale_handoff"
+          ]
+        },
+        "heading": {
+          "number": "09",
+          "kicker": "LETTER",
+          "title": "美咲からの手紙"
+        },
+        "content": {
+          "kicker": "九十九探偵事務所",
+          "title": "たんていさんへ",
+          "received_stamp": "依頼完了",
+          "date": "退院の日",
+          "body": [
+            "たんていさんへ\n\nえまちゃんを見つけてくれてありがとうございます。\nえまちゃんは元気です。今日もいっしょに遊びました。\nえまちゃんはしせつに行くそうです。でも、近くのしせつなので、またこれからも遊んでくれるそうです！\n\n本当に、本当に、ありがとうございました。"
+          ],
+          "signature": "遠藤美咲"
+        }
+      },
+      {
+        "type": "dialogue",
+        "id": "epilogue",
+        "heading": {
+          "number": "10",
+          "kicker": "CONVERSATION LOG",
+          "title": "いつもの事務所"
+        },
+        "messages": [
+          {
+            "speaker": "narrator",
+            "text": "胸に、暖かなものが広がる。そうか、守れたんだ。彼女たちの日常を。"
+          },
+          {
+            "speaker": "director",
+            "text": "いやあ、素晴らしい解決でしたね。美咲ちゃんも大喜びです"
+          },
+          {
+            "speaker": "narrator",
+            "text": "振り返ると、所長がデスクで優雅にコーヒーを飲んでいた。あの夜の凄絶な気迫は影を潜め、いつもの飄々とした顔に戻っている。"
+          },
+          {
+            "speaker": "player",
+            "text": "……所長、僕の体の中の封印って、本当に大丈夫なんですか？"
+          },
+          {
+            "speaker": "director",
+            "text": "ええ。今のところは安定しています。生きてるうちは問題ないでしょう。さすが、『籠目』の血ですね"
+          },
+          {
+            "speaker": "player",
+            "text": "生きてるうちは……。あの、僕が死んだら、封印はどうなるのでしょう"
+          },
+          {
+            "speaker": "director",
+            "text": "そうですね、生きてるうちとは言いましたが、天寿を全うすれば、オオクチ様も一緒に消滅するでしょう。逆にうっかり早逝でもしようものなら……分かりますね？くれぐれも健康に生きてください"
+          },
+          {
+            "speaker": "player",
+            "text": "……！肝に銘じます"
+          },
+          {
+            "speaker": "director",
+            "expression": "deflecting",
+            "text": "さて、それでは退院もしたことですし、また馬車馬のように働いてもらいますよ"
+          },
+          {
+            "speaker": "player",
+            "expression": "exasperated",
+            "text": "……労働は健康の敵ですよ"
+          },
+          {
+            "speaker": "narrator",
+            "text": "そう苦笑しながら、新しい報告書用紙をセットする。こうして、小さな依頼人の大きな事件は、静かに幕を閉じたのだった。"
+          }
+        ],
+        "visible_when": {
+          "event": "questions_solved",
+          "question_ids": [
+            "finale_purpose",
+            "finale_selection",
+            "finale_target",
+            "finale_handoff"
+          ]
+        }
       }
     ]
   }
