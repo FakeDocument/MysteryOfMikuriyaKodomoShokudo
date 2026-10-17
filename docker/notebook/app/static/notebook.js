@@ -521,7 +521,7 @@
     renderProgress();
 
     if (animateNewDialogue) {
-      renderContext.newRows.at(-1)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      renderContext.newRows[0]?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }
 
