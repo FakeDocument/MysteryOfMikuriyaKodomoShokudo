@@ -31,6 +31,7 @@
           },
           {
             "speaker": "player",
+            "expression": "angry",
             "text": "所長！ちょうどよかった！急がないと！！笑真さんが！！！"
           },
           {
@@ -120,13 +121,18 @@
                 "id": "datetime",
                 "label": "日時",
                 "placeholder": "日時",
-                "input_mode": "datetime-local"
+                "input_mode": "datetime"
               },
               {
                 "id": "place",
                 "label": "場所",
                 "placeholder": "受入口名",
-                "input_mode": "text"
+                "input_mode": "select",
+                "options":[
+                  "裏手の荷捌き所",
+                  "正面玄関",
+                  "漁港"
+                ]
               }
             ]
           }
