@@ -14,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 
-from .content import CHAPTERS, QUESTIONS_BY_ID, public_chapters, validate_answer
+from .content import CHAPTERS, DIALOGUE_SPEAKERS, QUESTIONS_BY_ID, public_chapters, validate_answer
 from .store import get_progress, initialize_database, save_answer, save_note
 
 
@@ -72,6 +72,7 @@ def index(request: Request) -> HTMLResponse:
         "index.html",
         {
             "chapters": public_chapters(current_progress),
+            "dialogue_speakers": DIALOGUE_SPEAKERS,
             "progress": current_progress,
             "asset_version": ASSET_VERSION,
         },

@@ -8,36 +8,7 @@
     renderedDialogueKeys: new Set(),
   };
 
-  const dialogueSpeakers = {
-    director: {
-      name: "所長",
-      defaultExpression: "normal",
-      avatars: {
-        normal: "Sushi-ctf-所長-普段着-普段.png",
-        deflecting: "Sushi-ctf-所長-普段着-ごまかし.png",
-        ceremonial_smile: "Sushi-ctf-所長-浄衣-普段.png",
-        ceremonial_serious: "Sushi-ctf-所長-浄衣-真剣.png",
-      },
-    },
-    katayanagi: {
-      name: "片柳",
-      defaultExpression: "normal",
-      avatars: {
-        normal: "Sushi-ctf-片柳-普段.png",
-        surprised: "Sushi-ctf-片柳-驚き.png",
-        despair: "Sushi-ctf-片柳-絶望.png",
-      },
-    },
-    player: {
-      name: "あなた",
-      defaultExpression: "normal",
-      avatars: {
-        normal: "Sushi-ctf-主人公-普段.png",
-        exasperated: "Sushi-ctf-主人公-呆れ.png",
-        angry: "Sushi-ctf-主人公-怒り.png",
-      },
-    },
-  };
+  const dialogueSpeakers = window.NOTEBOOK_DATA.dialogue_speakers;
 
   const elements = {
     tabs: document.querySelector("#chapter-tabs"),

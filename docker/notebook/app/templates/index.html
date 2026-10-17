@@ -8,7 +8,7 @@
   <title>九十九探偵事務所｜調査ノート</title>
   <link rel="stylesheet" href="{{ url_for('static', path='/notebook.css') }}?v={{ asset_version }}">
   <script>
-    window.NOTEBOOK_DATA = {{ {"chapters": chapters, "progress": progress} | tojson }};
+    window.NOTEBOOK_DATA = {{ {"chapters": chapters, "progress": progress, "dialogue_speakers": dialogue_speakers} | tojson }};
   </script>
   <script src="{{ url_for('static', path='/markdown.js') }}?v={{ asset_version }}" defer></script>
   <script src="{{ url_for('static', path='/notebook.js') }}?v={{ asset_version }}" defer></script>

@@ -379,3 +379,6 @@ Kali攻撃マシンのみ、上記の隔離ネットワークに加えて `kali-
 3. すべての回答を証拠から導けること
 4. 採用する配布環境で安定して再現・公開できること
 5. CTF環境外への攻撃を必要としないこと
+## 調査ノートの話者定義（2026-10-17）
+
+- 話者名・既定表情・表情と画像の対応は `docker/notebook/app/data/dialogue-speakers.json` を唯一の定義元とする。Pythonで起動時に検証し、同じ定義をHTMLの `NOTEBOOK_DATA.dialogue_speakers` へ渡してJavaScriptの描画に使う。話者や表情の対応表をPython・JavaScriptへ重複定義しない。

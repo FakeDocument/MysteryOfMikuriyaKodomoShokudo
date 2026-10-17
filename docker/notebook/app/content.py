@@ -18,33 +18,9 @@ ANSWERS_PATH = DATA_DIR / "answers.json"
 STATIC_IMAGES_DIR = Path(__file__).parent / "static" / "images"
 ANSWER_ONLY_KEYS = {"accepted", "validation", "required_terms", "incorrect_message"}
 ALLOWED_VALIDATIONS = {"one_of", "exact", "contains_all"}
-ALLOWED_SPEAKERS = {"director", "katayanagi", "narrator", "player"}
 ALLOWED_VISIBILITY_EVENTS = {"question_solved", "questions_solved"}
 ALLOWED_TOP_LEVEL_BLOCKS = {"dialogue", "document", "evidence_note", "questions", "report"}
 ALLOWED_QUESTION_BLOCKS = {"hints", "dialogue"}
-DIALOGUE_DEFAULT_EXPRESSIONS = {
-    "director": "normal",
-    "katayanagi": "normal",
-    "player": "normal",
-}
-DIALOGUE_AVATARS = {
-    "director": {
-        "normal": "Sushi-ctf-所長-普段着-普段.png",
-        "deflecting": "Sushi-ctf-所長-普段着-ごまかし.png",
-        "ceremonial_smile": "Sushi-ctf-所長-浄衣-普段.png",
-        "ceremonial_serious": "Sushi-ctf-所長-浄衣-真剣.png",
-    },
-    "katayanagi": {
-        "normal": "Sushi-ctf-片柳-普段.png",
-        "surprised": "Sushi-ctf-片柳-驚き.png",
-        "despair": "Sushi-ctf-片柳-絶望.png",
-    },
-    "player": {
-        "normal": "Sushi-ctf-主人公-普段.png",
-        "exasperated": "Sushi-ctf-主人公-呆れ.png",
-        "angry": "Sushi-ctf-主人公-怒り.png",
-    },
-}
 DIALOGUE_IMAGE_PATH = re.compile(
     r"^/static/images/[a-z0-9][a-z0-9._-]*\.(?:png|jpe?g|webp)$"
 )
@@ -72,6 +48,33 @@ def _load_json(path: Path, version: int) -> dict[str, Any]:
     return data
 
 
+
+def _load_dialogue_speakers() -> dict[str, Any]:
+    data = _load_json(DATA_DIR / "dialogue-speakers.json", 1)
+    speakers = data.get("speakers")
+    if not isinstance(speakers, dict) or not speakers:
+        raise ContentConfigurationError("dialogue-speakers.json の speakers は空でないオブジェクトにしてください。")
+    for speaker_id, speaker in speakers.items():
+        location = f"dialogue-speakers.json.speakers.{speaker_id}"
+        if not re.fullmatch(r"[a-z][a-z0-9_]*", speaker_id) or speaker_id == "narrator":
+            raise ContentConfigurationError(f"{location} の話者IDが不正です。")
+        if not isinstance(speaker, dict):
+            raise ContentConfigurationError(f"{location} はオブジェクトにしてください。")
+        _require_text(speaker.get("name"), f"{location}.name")
+        _require_text(speaker.get("defaultExpression"), f"{location}.defaultExpression")
+        avatars = speaker.get("avatars")
+        if not isinstance(avatars, dict) or not avatars:
+            raise ContentConfigurationError(f"{location}.avatars は空でないオブジェクトにしてください。")
+        if speaker["defaultExpression"] not in avatars:
+            raise ContentConfigurationError(f"{location} の既定表情が avatars にありません。")
+        for expression, filename in avatars.items():
+            _require_text(expression, f"{location}.avatars の表情名")
+            _require_text(filename, f"{location}.avatars.{expression}")
+            if Path(filename).name != filename or not (STATIC_IMAGES_DIR / filename).is_file():
+                raise ContentConfigurationError(f"{location}.avatars.{expression} の画像が見つからないか、ファイル名が不正です。")
+    return speakers
+
+
 def _require_text(value: Any, location: str) -> None:
     if not isinstance(value, str) or not value.strip():
         raise ContentConfigurationError(f"{location} は空でない文字列にしてください。")
@@ -93,10 +96,10 @@ def _validate_dialogue(messages: Any, location: str) -> None:
         item_location = f"{location}[{index}]"
         if not isinstance(item, dict):
             raise ContentConfigurationError(f"{item_location} はオブジェクトにしてください。")
-        if item.get("speaker") not in ALLOWED_SPEAKERS:
+        if item.get("speaker") not in {*DIALOGUE_SPEAKERS, "narrator"}:
             raise ContentConfigurationError(
-                f"{item_location}.speaker は director・katayanagi・narrator・player "
-                "のいずれかにしてください。"
+                f"{item_location}.speaker は "
+                f"{'・'.join([*DIALOGUE_SPEAKERS, 'narrator'])} のいずれかにしてください。"
             )
         speaker = item["speaker"]
         expression = item.get("expression")
@@ -108,8 +111,8 @@ def _validate_dialogue(messages: Any, location: str) -> None:
         else:
             if expression is not None:
                 _require_text(expression, f"{item_location}.expression")
-            resolved_expression = expression or DIALOGUE_DEFAULT_EXPRESSIONS[speaker]
-            available_expressions = DIALOGUE_AVATARS[speaker]
+            resolved_expression = expression or DIALOGUE_SPEAKERS[speaker]["defaultExpression"]
+            available_expressions = DIALOGUE_SPEAKERS[speaker]["avatars"]
             if resolved_expression not in available_expressions:
                 raise ContentConfigurationError(
                     f"{item_location}.expression は "
@@ -571,6 +574,7 @@ def load_content(
     return chapters, questions_by_id
 
 
+DIALOGUE_SPEAKERS = _load_dialogue_speakers()
 CHAPTERS, QUESTIONS_BY_ID = load_content()
 
 
