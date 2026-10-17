@@ -306,12 +306,20 @@ def _validate_question_inputs(question: dict[str, Any], question_id: str) -> Non
     required_keys = {"id", "label", "placeholder", "input_mode"}
     for index, field in enumerate(fields):
         location = f"{question_id}.answer_fields[{index}]"
-        if not isinstance(field, dict) or set(field) != required_keys:
+        if not isinstance(field, dict) or set(field) != (required_keys | ({"options"} if field.get("input_mode") == "select" else set())):
             raise ContentConfigurationError(
                 f"{location} は id・label・placeholder・input_mode だけを持つオブジェクトにしてください。"
             )
         for key in required_keys:
             _require_text(field.get(key), f"{location}.{key}")
+        if field["input_mode"] == "select":
+            options = field.get("options")
+            if not isinstance(options, list) or len(options) < 2:
+                raise ContentConfigurationError(f"{location}.options は2件以上の配列にしてください。")
+            for option_index, option in enumerate(options):
+                _require_text(option, f"{location}.options[{option_index}]")
+            if len(set(options)) != len(options):
+                raise ContentConfigurationError(f"{location}.options に重複があります。")
         field_id = field["id"]
         if not ANSWER_FIELD_ID.fullmatch(field_id):
             raise ContentConfigurationError(

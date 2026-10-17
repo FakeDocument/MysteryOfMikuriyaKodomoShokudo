@@ -384,6 +384,18 @@
     const fields = question.answer_fields.map((field, index) => {
       const isDateTime = field.input_mode === "datetime";
       const value = isDateTime ? dateTimeInputValue(values[index] || "", chapterDate) : values[index] || "";
+      if (field.input_mode === "select") {
+        // Preserve answers saved before a text field was converted to a select.
+        const options = value && !field.options.includes(value) ? [value, ...field.options] : field.options;
+        return `
+          <label class="answer-field" for="answer-${question.id}-${field.id}">
+            <span class="answer-field-label">${escapeHtml(field.label)}</span>
+            <select id="answer-${question.id}-${field.id}" name="answer_${field.id}" data-answer-part required ${solved ? "disabled" : ""}>
+              <option value="">${escapeHtml(field.placeholder)}</option>
+              ${options.map((option) => `<option value="${escapeAttribute(option)}" ${option === value ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}
+            </select>
+          </label>`;
+      }
       return `
       <label class="answer-field" for="answer-${question.id}-${field.id}">
         <span class="answer-field-label">${escapeHtml(field.label)}</span>
