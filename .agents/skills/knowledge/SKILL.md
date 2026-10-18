@@ -394,3 +394,12 @@ Kali攻撃マシンのみ、上記の隔離ネットワークに加えて `kali-
 - UXのため`input_mode: datetime` の未回答欄は `2026-09-11T00:00` を初期値とし、保存済みの日時があればその値を優先する。
 
 - 話者名・既定表情・表情と画像の対応は `docker/notebook/app/data/dialogue-speakers.json` を唯一の定義元とする。Pythonで起動時に検証し、同じ定義をHTMLの `NOTEBOOK_DATA.dialogue_speakers` へ渡してJavaScriptの描画に使う。話者や表情の対応表をPython・JavaScriptへ重複定義しない。
+
+## 初心者向け配布・案内サイト（2026-10-18実装）
+
+- セットアップ手順の正本はルート `README.md`。`scripts/build_site.py` が同じMarkdownから静的案内サイトを生成し、既定ブランチへの関連変更で `.github/workflows/pages.yml` がGitHub Pagesへデプロイする。初回はSettingsのPages公開元をGitHub Actionsに設定する。
+- `v` で始まるタグのpushで `.github/workflows/release.yml` がamd64・arm64のネイティブLinuxランナーでComposeをビルドし、全サービスのヘルスチェックを行う。両方成功した後にReleasesを公開する。
+- `scripts/package_release.py` が版・アーキテクチャを固定したCompose、Windows x64 / Apple Silicon Macの起動用ZIP、環境イメージtar.gz、SHA-256を作る。ZIPにはREADMEと実行用設定・ランチャーを含める。
+- `distribution/` の配布用ランチャーはDocker Desktop導入済みを前提とし、必要な版のイメージが存在しない場合だけ同一リリースから取得・SHA-256検証・docker loadを行う。取得後はpull/buildを禁止してオフライン起動する。全サービスのhealthy確認後に調査ノートを開く。停止・進捗削除確認付き初期化もZIPに同梱する。
+- `launcher/` はソースからの開発起動用とし、Composeでビルド・起動・healthy確認を行う。
+- ユーザーの明示許可により2026-10-18に既存リポジトリを公開化し、Pagesの公開元をGitHub Actionsに設定した。公開前にgitleaks v8.30.1で全Git履歴を走査し、秘密情報の検出は0件だった。初回リリースは `v0.1.0` とする。

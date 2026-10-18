@@ -7,3 +7,6 @@ __pycache__/
 !.env.example
 
 .DS_Store
+# Generated distribution and site
+/dist/
+/_site/

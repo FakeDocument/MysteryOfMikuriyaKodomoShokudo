@@ -1,0 +1,70 @@
+name: Build playable release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate distribution scripts
+        run: python -m unittest discover -s tests -v
+      - name: Build native images
+        run: docker compose build --pull
+      - name: Verify environment health
+        run: docker compose up --no-build --wait --wait-timeout 300
+      - name: Failure diagnostics
+        if: failure()
+        run: |
+          docker compose ps -a
+          docker compose logs --tail 100
+      - name: Stop smoke environment
+        if: always()
+        run: docker compose down --volumes
+      - name: Package images and launchers
+        env:
+          RELEASE_VERSION: ${{ github.ref_name }}
+          RELEASE_REPOSITORY: ${{ github.repository }}
+          RELEASE_ARCH: ${{ matrix.arch }}
+        run: python scripts/package_release.py --version "$RELEASE_VERSION" --arch "$RELEASE_ARCH" --repository "$RELEASE_REPOSITORY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.arch }}
+          path: dist/*
+          compression-level: 0
+          retention-days: 7
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: dist
+      - name: Publish verified release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_VERSION: ${{ github.ref_name }}
+        run: |
+          gh release create "$RELEASE_VERSION" dist/* --verify-tag --title "SushiCTF $RELEASE_VERSION" --notes "WindowsはSushiCTF-Windows-x64.zip、Apple Silicon MacはSushiCTF-macOS-arm64.zipをダウンロードして展開し、はじめるを実行してください。Docker Desktopが必要です。環境イメージは初回起動時に自動取得します。詳しくは同梱READMEをご覧ください。"
