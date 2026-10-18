@@ -400,6 +400,7 @@ Kali攻撃マシンのみ、上記の隔離ネットワークに加えて `kali-
 ## 初心者向け配布・案内サイト（2026-10-18実装）
 
 - セットアップ手順の正本はルート `README.md`。`scripts/build_site.py` が同じMarkdownから静的案内サイトを生成し、既定ブランチへの関連変更で `.github/workflows/pages.yml` がGitHub Pagesへデプロイする。初回はSettingsのPages公開元をGitHub Actionsに設定する。
+- 案内サイトの折り返しは `word-break: auto-phrase` で日本語の文節を考慮する。未対応ブラウザは `normal` にフォールバックし、長い文字列は `overflow-wrap: anywhere` で領域内に収める。GitHub上のREADME表示にはこのCSSは適用されない。
 - `v` で始まるタグのpushで `.github/workflows/release.yml` がamd64・arm64のネイティブLinuxランナーでComposeをビルドし、全サービスのヘルスチェックを行う。両方成功した後にReleasesを公開する。
 - `scripts/package_release.py` が版・アーキテクチャを固定したCompose、Windows x64 / Apple Silicon Macの起動用ZIP、環境イメージtar.gz、SHA-256を作る。ZIPにはREADMEと実行用設定・ランチャーを含める。
 - `distribution/` の配布用ランチャーはDocker Desktop導入済みを前提とし、必要な版のイメージが存在しない場合だけ同一リリースから取得・SHA-256検証・docker loadを行う。取得後はpull/buildを禁止してオフライン起動する。全サービスのhealthy確認後に調査ノートを開く。停止・進捗削除確認付き初期化もZIPに同梱する。
