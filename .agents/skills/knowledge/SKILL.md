@@ -403,3 +403,5 @@ Kali攻撃マシンのみ、上記の隔離ネットワークに加えて `kali-
 - `distribution/` の配布用ランチャーはDocker Desktop導入済みを前提とし、必要な版のイメージが存在しない場合だけ同一リリースから取得・SHA-256検証・docker loadを行う。取得後はpull/buildを禁止してオフライン起動する。全サービスのhealthy確認後に調査ノートを開く。停止・進捗削除確認付き初期化もZIPに同梱する。
 - `launcher/` はソースからの開発起動用とし、Composeでビルド・起動・healthy確認を行う。
 - ユーザーの明示許可により2026-10-18に既存リポジトリを公開化し、Pagesの公開元をGitHub Actionsに設定した。公開前にgitleaks v8.30.1で全Git履歴を走査し、秘密情報の検出は0件だった。初回リリースは `v0.1.0` とする。
+
+- `v0.1.0` を公開済み。Pagesは `https://fakedocument.github.io/MysteryOfMikuriyaKodomoShokudo/`、配布先は同リポジトリのReleases。Pages公開・配布検証・両CPUのビルド／全サービスhealthy確認／ZIP生成／Releases公開のCIがすべて成功した。公開URLから両OSのZIPを認証なしで取得し、ZIPチェックサム・イメージのGitHub asset digestとランチャー内SHA-256の一致・固定Compose設定を確認済み。実際のWindows/macOSでのダブルクリック操作は未検証。
