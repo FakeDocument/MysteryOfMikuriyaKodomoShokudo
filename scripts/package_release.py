@@ -10,6 +10,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 SERVICES = ('notebook', 'sushi', 'portal', 'kali')
+BUNDLE_NAME = 'MysteryOfMikuriyaKodomoShokudo'
 
 
 def run(*args, **kwargs):
@@ -40,7 +41,7 @@ def main():
         images.append(image)
     out = ROOT / 'dist'
     out.mkdir(exist_ok=True)
-    archive = out / f'SushiCTF-images-{args.arch}.tar.gz'
+    archive = out / f'{BUNDLE_NAME}-images-{args.arch}.tar.gz'
     # Stream to disk rather than buffering a multi-GB image archive in RAM.
     with gzip.open(archive, 'wb', compresslevel=6) as target:
         proc = subprocess.Popen(['docker', 'save', *images], stdout=subprocess.PIPE)
@@ -57,10 +58,10 @@ def main():
         sha = hashlib.file_digest(stream, 'sha256').hexdigest()
     url = f'https://github.com/{args.repository}/releases/download/{args.version}/{archive.name}'
     os_name = 'Windows-x64' if args.arch == 'amd64' else 'macOS-arm64'
-    bundle = out / f'SushiCTF-{os_name}.zip'
+    bundle = out / f'{BUNDLE_NAME}-{os_name}.zip'
     with zipfile.ZipFile(bundle, 'w', zipfile.ZIP_DEFLATED) as z:
         def add(name, content, executable=False):
-            entry = zipfile.ZipInfo(f'SushiCTF/{name}')
+            entry = zipfile.ZipInfo(f'{BUNDLE_NAME}/{name}')
             entry.create_system = 3
             entry.external_attr = (0o100755 if executable else 0o100644) << 16
             z.writestr(entry, content)
@@ -70,18 +71,18 @@ def main():
         add('README.md', (ROOT / 'README.md').read_bytes())
         if args.arch == 'amd64':
             add('start.ps1', b'\xef\xbb\xbf' + (ROOT / 'distribution/start.ps1').read_bytes())
-            add('はじめる.bat', '@echo off\r\ncd /d "%~dp0"\r\npowershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0start.ps1"\r\n')
-            for name, action in [('とめる', 'stop'), ('初期化', 'reset')]:
+            add('start.bat', '@echo off\r\ncd /d "%~dp0"\r\npowershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0start.ps1"\r\n')
+            for action in ('stop', 'reset'):
                 # ASCII wrappers are readable by cmd.exe regardless of codepage.
                 confirm = 'set /p "answer=Delete ALL progress? Type y to continue: "\r\nif /i not "%answer%"=="y" exit /b\r\n' if action == 'reset' else ''
                 cmd = 'down --volumes' if action == 'reset' else 'stop'
-                add(name + '.bat', '@echo off\r\ncd /d "%~dp0"\r\n' + confirm + f'docker compose {cmd}\r\nif errorlevel 1 (echo Failed. Check Docker Desktop.) else (echo Done.)\r\npause\r\n')
+                add(action + '.bat', '@echo off\r\ncd /d "%~dp0"\r\n' + confirm + f'docker compose {cmd}\r\nif errorlevel 1 (echo Failed. Check Docker Desktop.) else (echo Done.)\r\npause\r\n')
         else:
-            add('はじめる.command', (ROOT / 'distribution/start.command').read_bytes(), True)
-            for name, action in [('とめる', 'stop'), ('初期化', 'reset')]:
+            add('start.command', (ROOT / 'distribution/start.command').read_bytes(), True)
+            for action in ('stop', 'reset'):
                 confirm = 'read -r -p "進捗をすべて削除します。続ける場合は y: " answer\n[ "$answer" = y ] || exit 0\n' if action == 'reset' else ''
                 cmd = 'down --volumes' if action == 'reset' else 'stop'
-                add(name + '.command', '#!/bin/bash\ncd "$(dirname "$0")"\n' + confirm + f'if docker compose {cmd}; then echo "完了しました。"; else echo "失敗しました。Docker Desktopを確認してください。"; fi\nread -r -p "Enterキーで閉じます..." _\n', True)
+                add(action + '.command', '#!/bin/bash\ncd "$(dirname "$0")"\n' + confirm + f'if docker compose {cmd}; then echo "完了しました。"; else echo "失敗しました。Docker Desktopを確認してください。"; fi\nread -r -p "Enterキーで閉じます..." _\n', True)
     for path in (archive, bundle):
         with path.open('rb') as stream:
             digest = hashlib.file_digest(stream, 'sha256').hexdigest()

@@ -67,4 +67,4 @@ jobs:
           GH_REPO: ${{ github.repository }}
           RELEASE_VERSION: ${{ github.ref_name }}
         run: |
-          gh release create "$RELEASE_VERSION" dist/* --verify-tag --title "SushiCTF $RELEASE_VERSION" --notes "WindowsはSushiCTF-Windows-x64.zip、Apple Silicon MacはSushiCTF-macOS-arm64.zipをダウンロードして展開し、はじめるを実行してください。Docker Desktopが必要です。環境イメージは初回起動時に自動取得します。詳しくは同梱READMEをご覧ください。"
+          gh release create "$RELEASE_VERSION" dist/* --verify-tag --title "御厨こども食堂の謎 $RELEASE_VERSION" --notes "WindowsはMysteryOfMikuriyaKodomoShokudo-Windows-x64.zip、Apple Silicon MacはMysteryOfMikuriyaKodomoShokudo-macOS-arm64.zipをダウンロードして展開し、start.bat（Windows）またはstart.command（Mac）を実行してください。Windows上での動作は未確認です。Docker Desktopが必要です。環境イメージは初回起動時に自動取得します。詳しくは同梱READMEをご覧ください。"

@@ -43,11 +43,16 @@ class DistributionTests(unittest.TestCase):
             with self.subTest(arch=arch), patch.dict(os.environ, self.env), patch.object(package, 'ROOT', self.root), patch.object(sys, 'argv', ['package_release.py', '--version', 'v1.2.3', '--arch', arch, '--repository', 'example/ctf']):
                 package.main()
                 out = self.root / 'dist'
-                archive = out / f'SushiCTF-images-{arch}.tar.gz'
+                archive = out / f'{package.BUNDLE_NAME}-images-{arch}.tar.gz'
                 self.assertEqual(gzip.decompress(archive.read_bytes()), b'image archive fixture')
-                bundle = out / ('SushiCTF-Windows-x64.zip' if arch == 'amd64' else 'SushiCTF-macOS-arm64.zip')
+                os_name = 'Windows-x64' if arch == 'amd64' else 'macOS-arm64'
+                bundle = out / f'{package.BUNDLE_NAME}-{os_name}.zip'
                 with zipfile.ZipFile(bundle) as z:
-                    compose = json.loads(z.read('SushiCTF/compose.yaml'))
+                    extension = 'bat' if arch == 'amd64' else 'command'
+                    for action in ('start', 'stop', 'reset'):
+                        self.assertIn(f'{package.BUNDLE_NAME}/{action}.{extension}', z.namelist())
+                    self.assertTrue(all(name.isascii() for name in z.namelist()))
+                    compose = json.loads(z.read(f'{package.BUNDLE_NAME}/compose.yaml'))
                     self.assertTrue(compose['networks']['target-net']['internal'])
                     for svc in compose['services'].values():
                         self.assertNotIn('build', svc)
@@ -55,7 +60,7 @@ class DistributionTests(unittest.TestCase):
                         self.assertEqual(svc['pull_policy'], 'never')
                         self.assertTrue(svc['image'].endswith(f':v1.2.3-{arch}'))
                         self.assertEqual(svc['ports'], ['127.0.0.1:8080:8000'])
-                    release = z.read('SushiCTF/release.txt').decode().splitlines()
+                    release = z.read(f'{package.BUNDLE_NAME}/release.txt').decode().splitlines()
                     self.assertEqual(release[0], hashlib.sha256(archive.read_bytes()).hexdigest())
                     self.assertIn('/releases/download/v1.2.3/', release[1])
                     if arch == 'arm64':
@@ -64,7 +69,7 @@ class DistributionTests(unittest.TestCase):
                                 self.assertTrue((info.external_attr >> 16) & 0o111)
                                 subprocess.run(['bash', '-n'], input=z.read(info), check=True)
                     else:
-                        self.assertTrue(z.read('SushiCTF/start.ps1').startswith(b'\xef\xbb\xbf'))
+                        self.assertTrue(z.read(f'{package.BUNDLE_NAME}/start.ps1').startswith(b'\xef\xbb\xbf'))
 
     def test_corrupt_download_never_loads_or_starts(self):
         (self.root / 'release.txt').write_text('0' * 64 + '\nhttps://example.invalid/archive\narm64\n')

@@ -6,7 +6,7 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
-echo Building and starting SushiCTF. This may take several minutes...
+echo Building and starting the investigation environment. This may take several minutes...
 docker compose up --build --wait --wait-timeout 300
 if errorlevel 1 (
   docker compose ps
