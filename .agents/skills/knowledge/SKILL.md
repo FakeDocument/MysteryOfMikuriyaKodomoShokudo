@@ -405,3 +405,8 @@ Kali攻撃マシンのみ、上記の隔離ネットワークに加えて `kali-
 - ユーザーの明示許可により2026-10-18に既存リポジトリを公開化し、Pagesの公開元をGitHub Actionsに設定した。公開前にgitleaks v8.30.1で全Git履歴を走査し、秘密情報の検出は0件だった。初回リリースは `v0.1.0` とする。
 
 - `v0.1.0` を公開済み。Pagesは `https://fakedocument.github.io/MysteryOfMikuriyaKodomoShokudo/`、配布先は同リポジトリのReleases。Pages公開・配布検証・両CPUのビルド／全サービスhealthy確認／ZIP生成／Releases公開のCIがすべて成功した。公開URLから両OSのZIPを認証なしで取得し、ZIPチェックサム・イメージのGitHub asset digestとランチャー内SHA-256の一致・固定Compose設定を確認済み。実際のWindows/macOSでのダブルクリック操作は未検証。
+
+## 配布容量の実測（2026-10-18）
+
+- `v0.1.0` の公開済み両CPUアーカイブを取得し、manifest参照レイヤーを重複排除して非圧縮tarサイズを集計した。amd64はダウンロード827,846,314 bytes・非圧縮2,241,411,584 bytes、arm64は800,905,497 bytes・2,306,803,712 bytes。詳しい方法とSHA-256は `notes/storage-v0.1.0.md`。
+- 上記は配布データ量でありDocker Desktop本体、管理領域、ロード時の一時領域、実行時書き込みを含むOS上の実占有容量ではない。クリーンなWindows/macOSでの初回セットアップのピーク容量は未測定。根拠のない空き容量20GBの目安をREADMEから実測データ量の案内へ改めた。
