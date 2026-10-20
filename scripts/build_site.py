@@ -1,11 +1,14 @@
 """READMEを正本としてGitHub Pages用の案内を生成する。"""
+
 from pathlib import Path
 import markdown
 
 root = Path(__file__).resolve().parents[1]
-body = markdown.markdown((root / 'README.md').read_text(), extensions=['fenced_code', 'toc'])
-css = (root / 'site/style.css').read_text()
-out = root / '_site'
+body = markdown.markdown(
+    (root / "README.md").read_text(), extensions=["fenced_code", "toc"]
+)
+css = (root / "site/style.css").read_text()
+out = root / "_site"
 out.mkdir(exist_ok=True)
 (out / "index.html").write_text(
     """<!doctype html>
@@ -19,6 +22,11 @@ out.mkdir(exist_ok=True)
 </header>
 <main id="guide">"""
     + body
-    + "</main><footer>御厨こども食堂の謎 · ローカルで遊ぶ、日本語の調査CTF</footer></body></html>"
+    + """
+    </main>
+    <footer>御厨こども食堂の謎 
+    <a href="https://x.com/fakedocument800">X (@fakedocument800)</a> ·
+    <a href="https://github.com/FakeDocument">GitHub (FakeDocument)</a>
+    </footer></body></html>"""
 )
-(out / '.nojekyll').touch()
+(out / ".nojekyll").touch()

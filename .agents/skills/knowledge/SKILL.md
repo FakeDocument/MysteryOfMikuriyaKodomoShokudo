@@ -399,6 +399,7 @@ Kali攻撃マシンのみ、上記の隔離ネットワークに加えて `kali-
 
 ## 初心者向け配布・案内サイト（2026-10-18実装）
 
+- 案内サイトのフッターに制作者のX（`https://x.com/fakedocument800`）とGitHub（`https://github.com/FakeDocument`）へのプロフィールリンクを表示する。
 - セットアップ手順の正本はルート `README.md`。`scripts/build_site.py` が同じMarkdownから静的案内サイトを生成し、既定ブランチへの関連変更で `.github/workflows/pages.yml` がGitHub Pagesへデプロイする。初回はSettingsのPages公開元をGitHub Actionsに設定する。
 - 案内サイトの折り返しは `word-break: auto-phrase` で日本語の文節を考慮する。未対応ブラウザは `normal` にフォールバックし、長い文字列は `overflow-wrap: anywhere` で領域内に収める。GitHub上のREADME表示にはこのCSSは適用されない。
 - `v` で始まるタグのpushで `.github/workflows/release.yml` がamd64・arm64のネイティブLinuxランナーでComposeをビルドし、全サービスのヘルスチェックを行う。両方成功した後にReleasesを公開する。
