@@ -24,7 +24,7 @@ out.mkdir(exist_ok=True)
     + body
     + """
     </main>
-    <footer>御厨こども食堂の謎 
+    <footer>作: 
     <a href="https://x.com/fakedocument800">X (@fakedocument800)</a> ·
     <a href="https://github.com/FakeDocument">GitHub (FakeDocument)</a>
     </footer></body></html>"""
