@@ -17,7 +17,7 @@ out.mkdir(exist_ok=True)
 <title>御厨こども食堂の謎 | はじめかた</title><style>"""
     + css
     + """</style></head>
-<body><a class="skip" href="#guide">本文へ</a><header><span>御厨こども食堂の謎 / はじめかた</span><p>一冊のノートから、調査をはじめよう。</p>
+<body><a class="skip" href="#guide">本文へ</a><header><p>御厨こども食堂の謎</p>
 <a class="download" href="https://github.com/FakeDocument/MysteryOfMikuriyaKodomoShokudo/releases/latest">起動用ZIPをダウンロード ↗</a>
 </header>
 <main id="guide">"""
