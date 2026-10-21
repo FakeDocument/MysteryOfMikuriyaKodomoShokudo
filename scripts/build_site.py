@@ -18,6 +18,8 @@ out.mkdir(exist_ok=True)
     + css
     + """</style></head>
 <body><a class="skip" href="#guide">本文へ</a><header><p>御厨こども食堂の謎</p>
+「えまちゃんを探してください」探偵事務所に舞い込んできた人探しの依頼。怪しいのは彼女の通っていた子ども食堂だ。
+<p>ハッキングを駆使し、真相を解き明かせ</p>
 <a class="download" href="https://github.com/FakeDocument/MysteryOfMikuriyaKodomoShokudo/releases/latest">起動用ZIPをダウンロード ↗</a>
 </header>
 <main id="guide">"""
