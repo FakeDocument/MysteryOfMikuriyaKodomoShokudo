@@ -1,6 +1,7 @@
 """READMEを正本としてGitHub Pages用の案内を生成する。"""
 
 from pathlib import Path
+import shutil
 import markdown
 
 root = Path(__file__).resolve().parents[1]
@@ -10,6 +11,7 @@ body = markdown.markdown(
 css = (root / "site/style.css").read_text()
 out = root / "_site"
 out.mkdir(exist_ok=True)
+shutil.copytree(root / "docs/mac-setup", out / "docs/mac-setup", dirs_exist_ok=True)
 (out / "index.html").write_text(
     """<!doctype html>
 <html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">

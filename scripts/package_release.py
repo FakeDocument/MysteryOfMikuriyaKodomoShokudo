@@ -69,6 +69,8 @@ def main():
         add('release.txt', f'{sha}\n{url}\n{args.arch}\n')
         add('images.txt', '\n'.join(images) + '\n')
         add('README.md', (ROOT / 'README.md').read_bytes())
+        for screenshot in sorted((ROOT / 'docs/mac-setup').glob('*.png')):
+            add(screenshot.relative_to(ROOT).as_posix(), screenshot.read_bytes())
         if args.arch == 'amd64':
             add('start.ps1', b'\xef\xbb\xbf' + (ROOT / 'distribution/start.ps1').read_bytes())
             add('start.bat', '@echo off\r\ncd /d "%~dp0"\r\npowershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0start.ps1"\r\n')

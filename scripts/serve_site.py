@@ -16,7 +16,7 @@ def build_site() -> None:
 
 build_site()
 server = Server()
-for source in (ROOT / "README.md", ROOT / "site" / "style.css", BUILD_SCRIPT):
+for source in (ROOT / "README.md", ROOT / "site" / "style.css", ROOT / "docs/mac-setup/*.png", BUILD_SCRIPT):
     server.watch(str(source), build_site, delay=0.5)
 
 server.serve(root=str(ROOT / "_site"), host="127.0.0.1", port=8000)

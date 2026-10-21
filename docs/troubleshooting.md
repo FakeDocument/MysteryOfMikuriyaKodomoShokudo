@@ -12,15 +12,25 @@
 
 ### 「Appleは検証できませんでした」と表示される
 
-![「start.command開いていません」と表示されたウィンドウ](mac-cant-open.png)
 `start.command` を開いたときに「Appleは、マルウェアが含まれていないことを検証できませんでした」と表示される場合があります。この表示だけでは、マルウェアが検出されたという意味ではありません。
 
 本作のGitHub Releasesから取得したファイルであることを確認し、次の手順で実行を許可してください。
 
 1. 警告画面を「完了」で閉じます。
+
+    <img src="mac-setup/01-warning.png" alt="start.commandを検証できないという警告。「完了」で閉じます。" width="300">
+
 2. 「システム設定」→「プライバシーとセキュリティ」を開きます。
+
+    <img src="mac-setup/02-privacy-security.png" alt="システム設定で「プライバシーとセキュリティ」を選んだ画面。" width="720">
+
 3. 下へスクロールし、「セキュリティ」に表示された `start.command` の「このまま開く」をクリックします。
-4. Macの認証を行い、確認画面で「開く」を選びます。
+
+    <img src="mac-setup/03-open-anyway.png" alt="start.commandのブロック表示と「このまま開く」ボタン。" width="720">
+
+4. 確認画面でも「このまま開く」を選びます。MacのパスワードやTouch IDによる認証を求められた場合は、画面の案内に従ってください。
+
+    <img src="mac-setup/04-confirm-open.png" alt="start.commandを開くか確認する画面。" width="300">
 
 「このまま開く」が表示されない場合は、もう一度 `start.command` を開いて警告を閉じてから、設定を確認してください。許可した後は、通常のダブルクリックで開けます。`stop.command` や `reset.command` で同じ警告が出た場合も、それぞれ同じ手順で許可してください。
 

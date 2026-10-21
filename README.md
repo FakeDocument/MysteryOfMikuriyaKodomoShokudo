@@ -35,6 +35,28 @@
 
 初回の準備には数分以上かかることがあります。「準備ができました」と表示されるまでウィンドウを閉じないでください。
 
+### Macで「Appleは検証できませんでした」と表示されたら
+
+Macで `start.command` を初めて開くと、Appleがファイルを検証できないという警告が表示されることがあります。マルウェアが検出されたという意味ではありません。GitHub Releasesからダウンロードしたファイルであることを確認して、次の手順で許可してください。
+
+1. 警告画面の「完了」を選びます。
+
+    <img src="docs/mac-setup/01-warning.png" alt="start.commandを検証できないという警告。「完了」で閉じます。" width="300">
+
+2. 「システム設定」→「プライバシーとセキュリティ」を開きます。
+
+    <img src="docs/mac-setup/02-privacy-security.png" alt="システム設定のサイドバーで「プライバシーとセキュリティ」を選んだ画面。" width="720">
+
+3. 右側を下へスクロールし、「セキュリティ」欄の `start.command` にある「このまま開く」を選びます。
+
+    <img src="docs/mac-setup/03-open-anyway.png" alt="セキュリティ欄にあるstart.commandのブロック表示と「このまま開く」ボタン。" width="720">
+
+4. 確認画面でも「このまま開く」を選びます。MacのパスワードやTouch IDによる認証を求められた場合は、画面の案内に従ってください。
+
+    <img src="docs/mac-setup/04-confirm-open.png" alt="start.commandを開くか確認する画面。「このまま開く」で実行を許可します。" width="300">
+
+「このまま開く」が見つからない場合は、`start.command` をもう一度開いて警告を閉じてから設定を確認してください。`stop.command` や `reset.command` に同じ警告が出た場合も、ファイルごとに同じ手順で許可してください。[Apple公式の案内](https://support.apple.com/ja-jp/102445)も参照できます。
+
 ## 中断・再開
 
 - 中断：`stop` を実行します。進行状況は残ります。
