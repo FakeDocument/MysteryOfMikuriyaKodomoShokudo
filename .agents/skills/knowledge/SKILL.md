@@ -399,6 +399,7 @@ Kali攻撃マシンのみ、上記の隔離ネットワークに加えて `kali-
 
 ## 初心者向け配布・案内サイト（2026-10-18実装）
 
+- 共有用サムネイルには、調査ノートで使用する所長の普段着アイコン `docker/notebook/app/static/images/Sushi-ctf-所長-普段着-普段.png` を使用する。サムネイルは縮小時に顔を判別できる画像を選ぶ。サイト生成時に `assets/director.png` へコピーし、公開URLをOGPとXのsummaryカードへ指定する。静的なOGPタグや画像指定の変更は、サイト生成と出力HTML・画像の確認で検証する。
 - Macで起動ファイルに出るAppleの検証警告は発生頻度が高いため、READMEを正本とする案内サイトの「はじめかた」直後に許可手順を掲載する。2026-10-21に実機で撮影した4画面を `docs/mac-setup/` に保存し、READMEと `docs/troubleshooting.md` で共有する。サイト生成時と配布ZIP作成時にも同じ相対パスで画像を同梱する。撮影したMacでは設定画面と確認ダイアログの両方で「このまま開く」を選び、追加認証は表示されなかったため、認証は求められた場合の案内とする。
 - 案内サイトのフッターに制作者のX（`https://x.com/fakedocument800`）とGitHub（`https://github.com/FakeDocument`）へのプロフィールリンクを表示する。
 - セットアップ手順の正本はルート `README.md`。`scripts/build_site.py` が同じMarkdownから静的案内サイトを生成し、既定ブランチへの関連変更で `.github/workflows/pages.yml` がGitHub Pagesへデプロイする。初回はSettingsのPages公開元をGitHub Actionsに設定する。

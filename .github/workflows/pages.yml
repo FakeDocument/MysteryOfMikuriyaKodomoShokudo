@@ -2,7 +2,7 @@ name: Setup guide on GitHub Pages
 on:
   push:
     branches: ['**']
-    paths: ['README.md', 'docs/mac-setup/**', 'site/**', 'scripts/build_site.py', '.github/workflows/pages.yml']
+    paths: ['README.md', 'docs/mac-setup/**', 'docker/notebook/app/static/images/Sushi-ctf-所長-普段着-普段.png', 'site/**', 'scripts/build_site.py', '.github/workflows/pages.yml']
   workflow_dispatch:
 permissions:
   contents: read
