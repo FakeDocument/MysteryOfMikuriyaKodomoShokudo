@@ -18,6 +18,12 @@
 - **操作を学びながら進める**：序盤は案内に沿って基本操作から学べます。行き詰まったときには段階的なヒントを参照でき、後半はそれまでに学んだ手法を組み合わせて調査します。
 - **調査環境をまとめて起動する**：調査ノート、ツール入りの調査端末、攻略対象はローカルのDocker環境で動作します。初回の準備後はオフラインで攻略でき、進捗を保存して中断・再開できます。
 
+## Colab試作（Docker不要）
+
+[Colabで試作を開く](https://colab.research.google.com/github/FakeDocument/MysteryOfMikuriyaKodomoShokudo/blob/main/experiments/colab/MysteryOfMikuriyaKodomoShokudo-Colab.ipynb)
+
+Googleアカウントでログインし、CPUランタイムで「調査環境を準備する」を実行してください。第1章のポート調査2問を、Nmapの実行・回答判定・正解後の会話まで試せます。[試作の使い方と検証範囲](https://github.com/FakeDocument/MysteryOfMikuriyaKodomoShokudo/blob/main/experiments/colab/README.md)を参照してください。
+
 ## 必要な環境
 
 - 動作確認済み: Apple Silicon搭載Mac（M1以降）
