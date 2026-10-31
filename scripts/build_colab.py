@@ -1,100 +1,61 @@
-"""既存の全章JSONから単独配布用のColabノートブックを生成する。"""
+"""既存の全章JSONから、固定コミットの教材を取得するColabノートブックを生成する。"""
 
 from __future__ import annotations
 
 import argparse
-import base64
 import hashlib
-import io
 import json
+import subprocess
 import textwrap
-import zipfile
 from pathlib import Path
 from typing import Any
 
+import colab_assets
+
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = ROOT / "experiments/colab/MysteryOfMikuriyaKodomoShokudo-Colab.ipynb"
+REPOSITORY = "FakeDocument/MysteryOfMikuriyaKodomoShokudo"
 
 
 def load_lesson() -> dict[str, Any]:
-    data = ROOT / "docker/notebook/app/data"
-    manifest = json.loads((data / "chapters/manifest.json").read_text())
-    chapters = [
-        json.loads((data / "chapters" / filename).read_text())["chapter"]
-        for filename in manifest["chapter_files"]
-    ]
-    answers = json.loads((data / "answers.json").read_text())["answers"]
-    speakers = json.loads((data / "dialogue-speakers.json").read_text())["speakers"]
-    questions = [
-        question
-        for chapter in chapters
-        for block in chapter["blocks"]
-        if block["type"] == "questions"
-        for question in block["items"]
-    ]
-    return {
-        "title": "御厨こども食堂の謎",
-        "chapters": chapters,
-        "speakers": speakers,
-        "questions": [
-            {**question, **answers[question["id"]]} for question in questions
+    return colab_assets.load_lesson(ROOT)
+
+
+def source_commit() -> str:
+    commit = subprocess.check_output(
+        ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
+    ).strip()
+    changed = subprocess.run(
+        [
+            "git",
+            "diff",
+            "--quiet",
+            commit,
+            "--",
+            *colab_assets.SOURCE_FILES,
+            *colab_assets.SOURCE_DIRS,
         ],
-    }
-
-
-def build_payload(lesson: dict[str, Any]) -> str:
-    buffer = io.BytesIO()
-    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
-        archive.writestr(
-            "colab_lab.py", (ROOT / "experiments/colab/colab_lab.py").read_bytes()
+        cwd=ROOT,
+        check=False,
+    )
+    untracked = subprocess.check_output(
+        [
+            "git",
+            "ls-files",
+            "--others",
+            "--exclude-standard",
+            "--",
+            *colab_assets.SOURCE_FILES,
+            *colab_assets.SOURCE_DIRS,
+        ],
+        cwd=ROOT,
+        text=True,
+    )
+    if changed.returncode or untracked.strip():
+        raise ValueError(
+            "教材・実行用ソースを先にコミットしてからNotebookを生成してください。"
         )
-        archive.writestr(
-            "colab_render.py", (ROOT / "experiments/colab/colab_render.py").read_bytes()
-        )
-        archive.writestr("lesson.json", json.dumps(lesson, ensure_ascii=False))
-        images = {
-            image
-            for speaker in lesson["speakers"].values()
-            for image in speaker["avatars"].values()
-        }
-
-        def find_images(value: Any) -> None:
-            if isinstance(value, dict):
-                if isinstance(value.get("image"), dict):
-                    images.add(Path(value["image"]["src"]).name)
-                for item in value.values():
-                    find_images(item)
-            elif isinstance(value, list):
-                for item in value:
-                    find_images(item)
-
-        find_images(lesson.get("chapters", []))
-        for image in sorted(images):
-            archive.writestr(
-                f"images/{image}",
-                (ROOT / "docker/notebook/app/static/images" / image).read_bytes(),
-            )
-        archive.writestr(
-            "smb.conf.in", (ROOT / "docker/sushi/samba/smb.conf").read_bytes()
-        )
-        answers = json.loads(
-            (ROOT / "docker/notebook/app/data/answers.json").read_text()
-        )["answers"]
-        username, password = answers["ch1_samba_credentials"]["accepted"][0].split("\t")
-        archive.writestr(
-            "account.json", json.dumps({"username": username, "password": password})
-        )
-        for source, destination in (
-            (ROOT / "docker/sushi/site", "site"),
-            (ROOT / "docker/sushi/samba/share", "share"),
-        ):
-            for file in sorted(source.rglob("*")):
-                if file.is_file():
-                    archive.writestr(
-                        str(Path(destination) / file.relative_to(source)),
-                        file.read_bytes(),
-                    )
-    return base64.b64encode(buffer.getvalue()).decode("ascii")
+    return commit
 
 
 def cell(kind: str, identifier: str, source: str, form: bool = False) -> dict[str, Any]:
@@ -189,20 +150,16 @@ def block_cells(block: dict[str, Any], chapter_id: str) -> list[dict[str, Any]]:
 
 def build_notebook() -> dict[str, Any]:
     lesson = load_lesson()
-    payload = build_payload(lesson)
-    setup = textwrap.dedent("""\
-        # @title 1. 調査環境を準備する
-        import base64, importlib, io, sys, zipfile
-        from pathlib import Path
+    commit = source_commit()
+    setup = "# @title 1. 調査環境を準備する\n"
+    setup += Path(colab_assets.__file__).read_text(encoding="utf-8")
+    setup += f"\nSOURCE_COMMIT = {commit!r}\nREPOSITORY = {REPOSITORY!r}\n"
+    setup += textwrap.dedent("""\
+        import importlib, sys
         if "lab" in globals():
             lab.stop()
         ROOT = Path("/content/mikuriya-colab")
-        ROOT.mkdir(parents=True, exist_ok=True)
-        """)
-    setup += 'PAYLOAD = """\n' + "\n".join(textwrap.wrap(payload, 1024)) + '\n"""\n'
-    setup += textwrap.dedent("""\
-        with zipfile.ZipFile(io.BytesIO(base64.b64decode(PAYLOAD))) as archive:
-            archive.extractall(ROOT)
+        bootstrap_runtime(ROOT, REPOSITORY, SOURCE_COMMIT)
         if str(ROOT) not in sys.path:
             sys.path.insert(0, str(ROOT))
         import colab_render
@@ -229,7 +186,7 @@ def build_notebook() -> dict[str, Any]:
 
 標的環境は寿司屋のWeb・Sambaを起動する試作です。後続章のWebメールや政府側サービスのColab対応は準備中です。
 
-環境と教材はこのファイルに同梱されています。初回は必要なツールを取得します。
+準備セルで、固定した版の教材をGitHubから取得し、必要なツールを導入します。
 進捗はランタイム内へ保存します。終了後も残したい場合は、末尾のセルから進捗ファイルをダウンロードしてください。
 """,
         ),

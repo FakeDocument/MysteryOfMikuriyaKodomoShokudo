@@ -3,13 +3,11 @@
 import ast
 import base64
 import importlib.util
-import io
 import json
 import subprocess
 import sys
 import tempfile
 import unittest
-import zipfile
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -157,7 +155,7 @@ class ColabLessonTests(unittest.TestCase):
 
 
 class ColabNotebookTests(unittest.TestCase):
-    def test_単独配布できるノートブックを生成できる(self) -> None:
+    def test_固定コミットから教材を取得するノートブックを生成できる(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             output = Path(temp) / "experiment.ipynb"
             subprocess.run(
@@ -183,56 +181,18 @@ class ColabNotebookTests(unittest.TestCase):
             self.assertEqual(cell["outputs"], [])
             self.assertIsNone(cell["execution_count"])
         setup = "".join(code_cells[0]["source"])
-        # 準備セルを実行せず、埋め込まれた配布データだけを検証する。
+        # 準備セルを実行せず、固定コミットと初期出力だけを検証する。
         tree = ast.parse(setup)
-        payload = next(
+        commit = next(
             ast.literal_eval(node.value)
             for node in tree.body
             if isinstance(node, ast.Assign)
             and any(
-                isinstance(target, ast.Name) and target.id == "PAYLOAD"
+                isinstance(target, ast.Name) and target.id == "SOURCE_COMMIT"
                 for target in node.targets
             )
         )
-        with zipfile.ZipFile(io.BytesIO(base64.b64decode(payload))) as archive:
-            self.assertIn("colab_lab.py", archive.namelist())
-            self.assertEqual(
-                archive.read("colab_render.py"),
-                (ROOT / "experiments/colab/colab_render.py").read_bytes(),
-            )
-            lesson = json.loads(archive.read("lesson.json"))
-            question_ids = {question["id"] for question in lesson["questions"]}
-            self.assertTrue(question_ids)
-            self.assertTrue(
-                all(
-                    question.get("accepted") or question.get("required_terms")
-                    for question in lesson["questions"]
-                )
-            )
-            for question in lesson["questions"]:
-                for block in question["blocks"]:
-                    if block["type"] != "dialogue":
-                        continue
-                    for message in block["messages"]:
-                        if message["speaker"] == "narrator":
-                            continue
-                        speaker = lesson["speakers"][message["speaker"]]
-                        expression = message.get(
-                            "expression", speaker["defaultExpression"]
-                        )
-                        image = speaker["avatars"][expression]
-                        self.assertTrue(
-                            archive.read(f"images/{image}").startswith(b"\x89PNG")
-                        )
-            self.assertTrue(
-                any(name.startswith("site/") for name in archive.namelist())
-            )
-            self.assertTrue(
-                all(
-                    not Path(name).is_absolute() and ".." not in Path(name).parts
-                    for name in archive.namelist()
-                )
-            )
+        self.assertRegex(commit, r"\A[0-9a-f]{40}\Z")
 
 
 if __name__ == "__main__":

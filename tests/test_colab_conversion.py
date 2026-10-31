@@ -1,7 +1,6 @@
 """章JSONからのセル生成と、生成セルの表示・入力の振る舞いを検証する。"""
 
 import ast
-import base64
 import contextlib
 import importlib.util
 import io
@@ -9,7 +8,6 @@ import json
 import sys
 import tempfile
 import unittest
-import zipfile
 from copy import deepcopy
 from html.parser import HTMLParser
 from pathlib import Path
@@ -18,6 +16,7 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "experiments/colab"))
+sys.path.insert(0, str(ROOT / "scripts"))
 
 
 def load_module(name: str, path: Path):
@@ -468,13 +467,10 @@ class ColabConversionTests(unittest.TestCase):
                 self.assertEqual(cell["outputs"], [])
                 self.assertIsNone(cell["execution_count"])
 
-    def test_同梱データだけで全章の全表示セルを実行できる(self) -> None:
+    def test_取得した教材から全章の全表示セルを実行できる(self) -> None:
         lesson = builder.load_lesson()
         self.assertIn("chapters", lesson)
-        with zipfile.ZipFile(
-            io.BytesIO(base64.b64decode(builder.build_payload(lesson)))
-        ) as archive:
-            archive.extractall(self.root)
+        builder.colab_assets.prepare_from_source(ROOT, self.root)
         self.lab = runtime.Lab(self.root)
         for question in lesson["questions"]:
             fields = runtime.answer_fields(question)
