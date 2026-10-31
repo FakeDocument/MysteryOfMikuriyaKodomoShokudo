@@ -10,15 +10,84 @@ import sys
 import tempfile
 import unittest
 import zipfile
+from html.parser import HTMLParser
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "experiments/colab"))
 spec = importlib.util.spec_from_file_location(
     "colab_lab", ROOT / "experiments/colab/colab_lab.py"
 )
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 Lesson = module.Lesson
+
+
+class DialogueParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.images: list[dict[str, str]] = []
+        self.tags: list[str] = []
+        self.text: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.tags.append(tag)
+        if tag == "img":
+            self.images.append(dict(attrs))
+
+    def handle_data(self, data: str) -> None:
+        self.text.append(data)
+
+
+class ColabDialogueTests(unittest.TestCase):
+    def test_話者の既定表情と台詞指定の表情を画像として埋め込む(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "normal.png").write_bytes(b"normal-image")
+            (root / "surprised.png").write_bytes(b"surprised-image")
+            speakers = {
+                "guide": {
+                    "name": "案内役",
+                    "defaultExpression": "normal",
+                    "avatars": {"normal": "normal.png", "surprised": "surprised.png"},
+                }
+            }
+            html = module.dialogue_html(
+                [
+                    {"speaker": "guide", "text": "確認中"},
+                    {"speaker": "guide", "expression": "surprised", "text": "発見"},
+                ],
+                speakers,
+                root,
+            )
+        parser = DialogueParser()
+        parser.feed(html)
+        images = [
+            base64.b64decode(image["src"].split(",", 1)[1]) for image in parser.images
+        ]
+        self.assertEqual(images, [b"normal-image", b"surprised-image"])
+        self.assertTrue(all(image.get("alt") for image in parser.images))
+
+    def test_話者名と台詞をHTMLとして実行せず簡単な書式は保持する(self) -> None:
+        speakers = {"guide": {"name": '<img src=x onerror="bad()">'}}
+        html = module.dialogue_html(
+            [
+                {
+                    "speaker": "guide",
+                    "text": "<script>bad()</script>\n`open` と **強調**",
+                },
+            ],
+            speakers,
+            Path("/unused"),
+        )
+        parser = DialogueParser()
+        parser.feed(html)
+        self.assertNotIn("script", parser.tags)
+        self.assertFalse(parser.images)
+        self.assertIn("code", parser.tags)
+        self.assertIn("strong", parser.tags)
+        self.assertIn("<script>bad()</script>", "".join(parser.text))
+        self.assertIn(speakers["guide"]["name"], "".join(parser.text))
 
 
 class ColabLessonTests(unittest.TestCase):
@@ -127,12 +196,34 @@ class ColabNotebookTests(unittest.TestCase):
         )
         with zipfile.ZipFile(io.BytesIO(base64.b64decode(payload))) as archive:
             self.assertIn("colab_lab.py", archive.namelist())
+            self.assertEqual(
+                archive.read("colab_render.py"),
+                (ROOT / "experiments/colab/colab_render.py").read_bytes(),
+            )
             lesson = json.loads(archive.read("lesson.json"))
             question_ids = {question["id"] for question in lesson["questions"]}
             self.assertTrue(question_ids)
             self.assertTrue(
-                all(question.get("accepted") for question in lesson["questions"])
+                all(
+                    question.get("accepted") or question.get("required_terms")
+                    for question in lesson["questions"]
+                )
             )
+            for question in lesson["questions"]:
+                for block in question["blocks"]:
+                    if block["type"] != "dialogue":
+                        continue
+                    for message in block["messages"]:
+                        if message["speaker"] == "narrator":
+                            continue
+                        speaker = lesson["speakers"][message["speaker"]]
+                        expression = message.get(
+                            "expression", speaker["defaultExpression"]
+                        )
+                        image = speaker["avatars"][expression]
+                        self.assertTrue(
+                            archive.read(f"images/{image}").startswith(b"\x89PNG")
+                        )
             self.assertTrue(
                 any(name.startswith("site/") for name in archive.namelist())
             )

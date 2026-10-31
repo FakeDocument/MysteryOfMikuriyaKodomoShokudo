@@ -1,9 +1,10 @@
-"""既存の第1章データから単独配布用のColab試作を生成する。"""
+"""既存の全章JSONから単独配布用のColabノートブックを生成する。"""
 
 from __future__ import annotations
 
 import argparse
 import base64
+import hashlib
 import io
 import json
 import textwrap
@@ -17,14 +18,23 @@ DEFAULT_OUTPUT = ROOT / "experiments/colab/MysteryOfMikuriyaKodomoShokudo-Colab.
 
 def load_lesson() -> dict[str, Any]:
     data = ROOT / "docker/notebook/app/data"
-    chapter = json.loads((data / "chapters/chapter-1.json").read_text())["chapter"]
+    manifest = json.loads((data / "chapters/manifest.json").read_text())
+    chapters = [
+        json.loads((data / "chapters" / filename).read_text())["chapter"]
+        for filename in manifest["chapter_files"]
+    ]
     answers = json.loads((data / "answers.json").read_text())["answers"]
     speakers = json.loads((data / "dialogue-speakers.json").read_text())["speakers"]
-    questions = next(
-        block for block in chapter["blocks"] if block["id"] == "port-scan"
-    )["items"]
+    questions = [
+        question
+        for chapter in chapters
+        for block in chapter["blocks"]
+        if block["type"] == "questions"
+        for question in block["items"]
+    ]
     return {
-        "title": chapter["title"],
+        "title": "御厨こども食堂の謎",
+        "chapters": chapters,
         "speakers": speakers,
         "questions": [
             {**question, **answers[question["id"]]} for question in questions
@@ -38,7 +48,32 @@ def build_payload(lesson: dict[str, Any]) -> str:
         archive.writestr(
             "colab_lab.py", (ROOT / "experiments/colab/colab_lab.py").read_bytes()
         )
+        archive.writestr(
+            "colab_render.py", (ROOT / "experiments/colab/colab_render.py").read_bytes()
+        )
         archive.writestr("lesson.json", json.dumps(lesson, ensure_ascii=False))
+        images = {
+            image
+            for speaker in lesson["speakers"].values()
+            for image in speaker["avatars"].values()
+        }
+
+        def find_images(value: Any) -> None:
+            if isinstance(value, dict):
+                if isinstance(value.get("image"), dict):
+                    images.add(Path(value["image"]["src"]).name)
+                for item in value.values():
+                    find_images(item)
+            elif isinstance(value, list):
+                for item in value:
+                    find_images(item)
+
+        find_images(lesson.get("chapters", []))
+        for image in sorted(images):
+            archive.writestr(
+                f"images/{image}",
+                (ROOT / "docker/notebook/app/static/images" / image).read_bytes(),
+            )
         archive.writestr(
             "smb.conf.in", (ROOT / "docker/sushi/samba/smb.conf").read_bytes()
         )
@@ -63,6 +98,9 @@ def build_payload(lesson: dict[str, Any]) -> str:
 
 
 def cell(kind: str, identifier: str, source: str, form: bool = False) -> dict[str, Any]:
+    if len(identifier) > 64:
+        digest = hashlib.sha256(identifier.encode()).hexdigest()[:12]
+        identifier = identifier[:51] + "-" + digest
     result = {
         "cell_type": kind,
         "id": identifier,
@@ -72,6 +110,81 @@ def cell(kind: str, identifier: str, source: str, form: bool = False) -> dict[st
     if kind == "code":
         result.update(execution_count=None, outputs=[])
     return result
+
+
+def block_cells(block: dict[str, Any], chapter_id: str) -> list[dict[str, Any]]:
+    kind = block["type"]
+    if kind not in {"dialogue", "document", "evidence_note", "questions", "report"}:
+        raise ValueError(f"未対応のブロック種別です: {kind}")
+    identifier = f"{chapter_id}-{block['id']}"
+    title = block.get("heading", {}).get("title", kind).replace("\n", " ")
+    cells = [
+        cell(
+            "code",
+            identifier,
+            f"# @title {title}\nlab.show_block({chapter_id!r}, {block['id']!r})\n",
+            form=True,
+        )
+    ]
+    if kind == "evidence_note":
+        source = (
+            "# @title 調査メモを保存する\n"
+            'evidence_note = lab.lesson.note # @param {type:"string"}\n'
+            f"lab.save_note({chapter_id!r}, evidence_note)\n"
+        )
+        cells.append(cell("code", identifier + "-input", source, form=True))
+    if kind == "questions":
+        for question in block["items"]:
+            for child in question["blocks"]:
+                if child["type"] not in {"hints", "dialogue"}:
+                    raise ValueError(f"未対応の設問内ブロックです: {child['type']}")
+            question_id = question["id"]
+            cells.append(
+                cell(
+                    "code",
+                    identifier + "-" + question_id,
+                    f"# @title 設問とヒントを表示する\nlab.show_question({question_id!r})\n",
+                    form=True,
+                )
+            )
+            fields = question.get(
+                "answer_fields",
+                [
+                    {
+                        "id": "answer",
+                        "label": "回答",
+                        "input_mode": question.get("input_mode", "text"),
+                    }
+                ],
+            )
+            lines = ["# @title 回答を記録する"]
+            values = []
+            for index, field in enumerate(fields):
+                parameter = (
+                    json.dumps(["", *field["options"]], ensure_ascii=False)
+                    if field.get("input_mode") == "select"
+                    else '{type:"string"}'
+                )
+                label = field["label"].replace("\n", " ")
+                if field.get("input_mode") == "datetime":
+                    label += "（YYYY-MM-DDTHH:MM）"
+                lines.extend(
+                    [
+                        f"# @markdown {label}",
+                        f'answer_{index} = "" # @param {parameter}',
+                    ]
+                )
+                values.append(f"{field['id']!r}: answer_{index}")
+            lines.append(f"_ = lab.answer({question_id!r}, {{{', '.join(values)}}})")
+            cells.append(
+                cell(
+                    "code",
+                    identifier + "-" + question_id + "-answer",
+                    "\n".join(lines) + "\n",
+                    form=True,
+                )
+            )
+    return cells
 
 
 def build_notebook() -> dict[str, Any]:
@@ -92,6 +205,8 @@ def build_notebook() -> dict[str, Any]:
             archive.extractall(ROOT)
         if str(ROOT) not in sys.path:
             sys.path.insert(0, str(ROOT))
+        import colab_render
+        importlib.reload(colab_render)
         import colab_lab
         importlib.reload(colab_lab)
         lab = colab_lab.Lab(ROOT)
@@ -104,46 +219,34 @@ def build_notebook() -> dict[str, Any]:
             "introduction",
             """# 御厨こども食堂の謎：Colab試作
 
-第1章のポート調査を、このノートブックだけで試せます。
+既存の章JSONから、序章から終章までの教材を生成したノートブックです。
 
 1. Googleアカウントでログインし、ランタイムは **CPU** を選びます。
 2. 「調査環境を準備する」の左にある ▶ を押し、準備完了まで待ちます。
-3. 下のコマンドセルを実行し、Nmapの結果を回答欄へ記録します。
+3. 上から表示セルを実行し、会話と設問を読み進めます。
+4. 調査には「＋コード」でセルを追加し、自分でコマンドを入力します。シェルコマンドの先頭には `!` を付けます。
+5. 正解後は続く表示セルを実行します。条件付きのセルを先に実行した場合は、正解後に再実行してください。
+
+標的環境は寿司屋のWeb・Sambaを起動する試作です。後続章のWebメールや政府側サービスのColab対応は準備中です。
 
 環境と教材はこのファイルに同梱されています。初回は必要なツールを取得します。
 進捗はランタイム内へ保存します。終了後も残したい場合は、末尾のセルから進捗ファイルをダウンロードしてください。
 """,
         ),
         cell("code", "setup", setup, form=True),
-        cell(
-            "markdown",
-            "scan-instructions",
-            """## サーバーの入口を調べる
-
-調査対象のドメイン名は `www.mikuriya-suisan.local` です。
-次のセルの ▶ を押すと、Nmapを実行できます。コマンドの先頭の `!` は、Colabからコマンドを実行するための記号です。
-
-結果の `PORT`・`STATE`・`SERVICE` の表で、`open` の行を読みます。
-`-sV` は、サービスの種類やバージョンも調べる指定です。
-""",
-        ),
-        cell("code", "scan", "!nmap -sV www.mikuriya-suisan.local\n"),
     ]
-    for index, question in enumerate(lesson["questions"]):
+    for chapter in lesson["chapters"]:
+        chapter_id = chapter["id"]
         cells.append(
             cell(
-                "markdown",
-                f"question-{index}",
-                f"## {question['label']}\n\n{question['prompt']}\n",
+                "code",
+                chapter_id + "-heading",
+                f"# @title {chapter['nav_title']}\nlab.show_chapter({chapter_id!r})\n",
+                form=True,
             )
         )
-        fields = question["answer_fields"]
-        assignments = "\n".join(
-            f'{field["label"]} = "" # @param {{type:"string"}}' for field in fields
-        )
-        values = ", ".join(f"{field['id']!r}: {field['label']}" for field in fields)
-        source = f"# @title 回答を記録する\n{assignments}\n_ = lab.answer({question['id']!r}, {{{values}}})\n"
-        cells.append(cell("code", f"answer-{index}", source, form=True))
+        for block in chapter["blocks"]:
+            cells.extend(block_cells(block, chapter_id))
     cells.extend(
         [
             cell(
@@ -151,7 +254,7 @@ def build_notebook() -> dict[str, Any]:
                 "finish",
                 """## 調査の中断・再開
 
-ここまでが今回の試作です。同じランタイムなら、準備セルを再実行しても保存済みの正解を引き継げます。
+同じランタイムなら、準備セルを再実行しても保存済みの正解と調査メモを引き継げます。
 Colabのランタイムが削除されると保存ファイルも消えるため、残したい進捗をダウンロードしてください。
 再開時は準備セルを実行し、次の「進捗を読み込む」からファイルを選びます。
 """,

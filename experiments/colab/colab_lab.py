@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import json
 import os
 import re
@@ -14,6 +15,8 @@ import time
 import unicodedata
 from pathlib import Path
 from typing import Any
+
+from colab_render import dialogue_html, inline_html, markdown_html
 
 TARGET_IP = "172.30.0.10"
 TARGET_HOST = "www.mikuriya-suisan.local"
@@ -31,7 +34,9 @@ TOOLS = (
 
 
 def normalize(value: str) -> str:
-    return re.sub(r"\s+", "", unicodedata.normalize("NFKC", value).casefold())
+    return re.sub(r"\s+", "", unicodedata.normalize("NFKC", value).casefold()).rstrip(
+        "/"
+    )
 
 
 def write_json(path: Path, value: Any) -> None:
@@ -42,19 +47,13 @@ def write_json(path: Path, value: Any) -> None:
     temporary.replace(path)
 
 
-def dialogue_markdown(messages: list[dict[str, Any]], speakers: dict[str, Any]) -> str:
-    return "\n\n".join(
-        f"**{speakers[message['speaker']]['name']}**\n\n{message['text']}"
-        for message in messages
-    )
-
-
 class Lesson:
     def __init__(self, data: dict[str, Any], progress_path: Path) -> None:
         self.data = data
         self.questions = {question["id"]: question for question in data["questions"]}
         self.progress_path = progress_path
         self.answers: dict[str, dict[str, str]] = {}
+        self.note = ""
         if progress_path.exists():
             self.restore(json.loads(progress_path.read_text(encoding="utf-8")))
 
@@ -62,19 +61,36 @@ class Lesson:
         if question_id not in self.questions:
             raise ValueError("設問IDが見つかりません。")
         question = self.questions[question_id]
-        field_ids = [field["id"] for field in question["answer_fields"]]
+        field_ids = [field["id"] for field in answer_fields(question)]
         if not isinstance(values, dict) or set(values) != set(field_ids):
             raise ValueError("すべての回答欄を入力してください。")
         if not all(isinstance(value, str) for value in values.values()):
             raise ValueError("回答は文字列で入力してください。")
-        answer = normalize(" ".join(values[field] for field in field_ids))
-        return any(answer == normalize(accepted) for accepted in question["accepted"])
+        answer = "\t".join(values[field] for field in field_ids)
+        validation = question.get("validation", "one_of")
+        if validation == "exact":
+            return any(
+                unicodedata.normalize("NFKC", answer.strip())
+                == unicodedata.normalize("NFKC", accepted)
+                for accepted in question["accepted"]
+            )
+        if validation == "contains_all":
+            return all(
+                normalize(term) in normalize(answer)
+                for term in question["required_terms"]
+            )
+        return any(
+            normalize(answer) == normalize(accepted)
+            for accepted in question["accepted"]
+        )
 
     def submit(self, question_id: str, values: dict[str, str]) -> bool:
         if not self._correct(question_id, values):
             return False
         updated = {**self.answers, question_id: dict(values)}
-        write_json(self.progress_path, {"version": 1, "answers": updated})
+        write_json(
+            self.progress_path, {"version": 1, "answers": updated, "note": self.note}
+        )
         self.answers = updated
         return True
 
@@ -84,26 +100,162 @@ class Lesson:
     def follow_up(self, question_id: str) -> str:
         if not self.is_solved(question_id):
             return ""
-        messages = [
-            message
+        return "".join(
+            self.render_block(block, question_id)
             for block in self.questions[question_id]["blocks"]
             if block["type"] == "dialogue"
-            for message in block["messages"]
-        ]
-        return dialogue_markdown(messages, self.data["speakers"])
+        )
+
+    def save_note(self, note: str) -> None:
+        if not isinstance(note, str):
+            raise TypeError("調査メモは文字列にしてください。")
+        write_json(
+            self.progress_path, {"version": 1, "answers": self.answers, "note": note}
+        )
+        self.note = note
+
+    def visible(self, block: dict[str, Any], question_id: str | None = None) -> bool:
+        condition = block.get("visible_when")
+        if not condition:
+            return True
+        if condition["event"] == "question_solved":
+            return self.is_solved(question_id)
+        if condition["event"] == "questions_solved":
+            return all(
+                self.is_solved(identifier) for identifier in condition["question_ids"]
+            )
+        raise ValueError("未対応の表示条件です。")
+
+    def chapter_open(self, chapter_id: str) -> bool:
+        for chapter in self.data.get("chapters", []):
+            if chapter["id"] == chapter_id:
+                return True
+            if not all(
+                self.is_solved(question["id"])
+                for block in chapter["blocks"]
+                if block["type"] == "questions"
+                for question in block["items"]
+            ):
+                return False
+        return False
+
+    def question_open(self, question_id: str) -> bool:
+        if "chapters" not in self.data:
+            return True
+        return any(
+            self.chapter_open(chapter["id"]) and self.visible(block)
+            for chapter in self.data["chapters"]
+            for block in chapter["blocks"]
+            if block["type"] == "questions"
+            and any(q["id"] == question_id for q in block["items"])
+        )
+
+    def render_block(
+        self, block: dict[str, Any], question_id: str | None = None
+    ) -> str:
+        if not self.visible(block, question_id):
+            return ""
+        heading = block.get("heading", {})
+        result = (
+            (
+                "<header><small>"
+                + html.escape(heading.get("kicker", ""))
+                + "</small><h3>"
+                + html.escape(heading.get("number", ""))
+                + " "
+                + html.escape(heading["title"])
+                + "</h3></header>"
+            )
+            if heading
+            else ""
+        )
+        kind = block["type"]
+        if kind == "dialogue":
+            return result + dialogue_html(
+                block["messages"],
+                self.data["speakers"],
+                self.progress_path.parent / "images",
+            )
+        if kind == "document":
+            content = block["content"]
+            result += "<article>" + "".join(
+                "<p>" + markdown_html(content.get(key, "")) + "</p>"
+                for key in ("kicker", "title")
+            )
+            result += "".join(
+                "<p>" + markdown_html(line) + "</p>" for line in content["body"]
+            )
+            return (
+                result
+                + "".join(
+                    "<p>" + markdown_html(content.get(key, "")) + "</p>"
+                    for key in ("received_stamp", "date", "signature")
+                )
+                + "</article>"
+            )
+        if kind == "report":
+            result += "<h4>" + inline_html(block["subject"]) + "</h4><dl>"
+            result += "".join(
+                "<dt>"
+                + inline_html(item["label"])
+                + "</dt><dd>"
+                + inline_html(item["value"])
+                + "</dd>"
+                for item in block["items"]
+            )
+            return result + "</dl><p>" + inline_html(block["conclusion"]) + "</p>"
+        if kind == "hints":
+            return (
+                "<details><summary>ヒント</summary>"
+                + "".join(
+                    "<p>" + markdown_html(item) + "</p>" for item in block["items"]
+                )
+                + "</details>"
+            )
+        if kind == "evidence_note":
+            return (
+                result
+                + "<p>"
+                + html.escape(block["label"])
+                + "</p><p>"
+                + html.escape(block.get("placeholder", ""))
+                + '</p><p style="white-space:pre-wrap">'
+                + html.escape(self.note)
+                + "</p>"
+            )
+        if kind == "questions":
+            return result
+        raise ValueError(f"未対応のブロック種別です: {kind}")
 
     def restore(self, progress: dict[str, Any]) -> None:
         if not isinstance(progress, dict) or not isinstance(
             progress.get("answers"), dict
         ):
-            raise ValueError("進捗ファイルの形式が不正です。")
+            raise TypeError("進捗ファイルの形式が不正です。")
         answers = progress["answers"]
+        note = progress.get("note", "")
+        if not isinstance(note, str):
+            raise TypeError("調査メモの形式が不正です。")
         if not all(
             self._correct(question, values) for question, values in answers.items()
         ):
             raise ValueError("進捗ファイルに不正な回答があります。")
-        write_json(self.progress_path, {"version": 1, "answers": answers})
+        write_json(self.progress_path, {"version": 1, "answers": answers, "note": note})
         self.answers = {question: dict(values) for question, values in answers.items()}
+        self.note = note
+
+
+def answer_fields(question: dict[str, Any]) -> list[dict[str, Any]]:
+    return question.get(
+        "answer_fields",
+        [
+            {
+                "id": "answer",
+                "label": "回答",
+                "input_mode": question.get("input_mode", "text"),
+            }
+        ],
+    )
 
 
 def process_identity(pid: int) -> str:
@@ -365,14 +517,96 @@ class Lab:
         )
 
     def answer(self, question_id: str, values: dict[str, str]) -> bool:
-        from IPython.display import Markdown, display
+        from IPython.display import HTML, display
 
+        if not self.lesson.question_open(question_id):
+            print("先に前の設問へ回答し、表示セルを実行してください。")
+            return False
         correct = self.lesson.submit(question_id, values)
         if correct:
-            display(Markdown("**正解です。**\n\n" + self.lesson.follow_up(question_id)))
+            display(
+                HTML(
+                    '<p style="color:#214d40;font-weight:bold">正解です。</p>'
+                    + self.lesson.follow_up(question_id)
+                )
+            )
         else:
-            print("調査結果と一致しません。Nmapの出力をもう一度確認してください。")
+            print(
+                self.lesson.questions[question_id].get(
+                    "incorrect_message",
+                    "調査結果と一致しません。証拠をもう一度確認してください。",
+                )
+            )
         return correct
+
+    def show_chapter(self, chapter_id: str) -> None:
+        from IPython.display import HTML, display
+
+        if not self.lesson.chapter_open(chapter_id):
+            print("前の章の設問を完了すると、この章を表示できます。")
+            return
+        chapter = next(
+            chapter
+            for chapter in self.lesson.data["chapters"]
+            if chapter["id"] == chapter_id
+        )
+        display(
+            HTML(
+                "<h2>"
+                + html.escape(chapter["title"])
+                + "</h2>"
+                + "".join(
+                    "<p>" + inline_html(chapter.get(key, "")) + "</p>"
+                    for key in ("date", "objective", "lead")
+                )
+            )
+        )
+
+    def show_block(self, chapter_id: str, block_id: str) -> None:
+        from IPython.display import HTML, display
+
+        chapter = next(
+            chapter
+            for chapter in self.lesson.data["chapters"]
+            if chapter["id"] == chapter_id
+        )
+        block = next(block for block in chapter["blocks"] if block["id"] == block_id)
+        if not self.lesson.chapter_open(chapter_id) or not self.lesson.visible(block):
+            print("必要な設問に正解してから、このセルを再実行してください。")
+            return
+        display(HTML(self.lesson.render_block(block)))
+
+    def show_question(self, question_id: str) -> None:
+        from IPython.display import HTML, display
+
+        if not self.lesson.question_open(question_id):
+            print("必要な設問に正解してから、このセルを再実行してください。")
+            return
+        question = self.lesson.questions[question_id]
+        result = (
+            "<h4>"
+            + html.escape(question["label"])
+            + "</h4><p>"
+            + inline_html(question["prompt"])
+            + "</p>"
+        )
+        for index, field in enumerate(answer_fields(question)):
+            result += (
+                f"<p>answer_{index}："
+                + html.escape(field["label"])
+                + " — "
+                + html.escape(field.get("placeholder", ""))
+                + "</p>"
+            )
+        result += "".join(
+            self.lesson.render_block(block, question_id) for block in question["blocks"]
+        )
+        display(HTML(result))
+
+    def save_note(self, chapter_id: str, note: str) -> None:
+        if self.lesson.chapter_open(chapter_id):
+            self.lesson.save_note(note)
+            print("調査メモを保存しました。")
 
     def stop(self) -> None:
         try:
