@@ -210,12 +210,9 @@ class ColabEmbeddedTests(unittest.TestCase):
                 self.assertEqual((root / "lesson.json").read_text(), "existing")
                 self.assertFalse((root.parent / "outside.txt").exists())
 
-    def test_HEADの教材ZIPを埋め込み版の準備に使える(self) -> None:
+    def test_作業ツリーの教材ZIPを埋め込み版の準備に使える(self) -> None:
         builder = load("embed_builder", ROOT / "scripts/build_colab.py")
-        commit = builder.subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
-        ).strip()
-        data = builder.embedded_archive(commit)
+        data = builder.embedded_archive()
         with zipfile.ZipFile(io.BytesIO(data)) as archive:
             names = {PurePosixPath(*PurePosixPath(n).parts[1:]).as_posix()
                      for n in archive.namelist()}
@@ -227,6 +224,76 @@ class ColabEmbeddedTests(unittest.TestCase):
                 Path(temp), base64.b64encode(data).decode()
             )
             self.assertTrue((Path(temp) / "lesson.json").is_file())
+
+    def test_埋め込み版の教材ZIPは未コミット変更を含みgitの除外設定に従う(
+        self,
+    ) -> None:
+        builder = load("worktree_builder", ROOT / "scripts/build_colab.py")
+        with tempfile.TemporaryDirectory() as temp:
+            source = Path(temp)
+            site = source / "docker/sushi/site"
+            site.mkdir(parents=True)
+            git = ["git", "-c", "user.name=test", "-c", "user.email=test@example.com"]
+
+            def run(*arguments: str) -> None:
+                builder.subprocess.run(
+                    [*git, *arguments], cwd=source, check=True, capture_output=True
+                )
+
+            run("init", "-q")
+            (source / ".gitignore").write_text("*.pyc\n")
+            (site / "index.html").write_text("committed")
+            (site / "removed.html").write_text("removed")
+            (source / "outside.txt").write_text("対象外")
+            run("add", ".")
+            run("commit", "-q", "-m", "init")
+            (site / "index.html").write_text("edited")
+            (site / "removed.html").unlink()
+            (site / "new.html").write_text("untracked")
+            (site / "cache.pyc").write_bytes(b"ignored")
+
+            data = builder.embedded_archive(source)
+
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            files = {name: archive.read(name) for name in archive.namelist()}
+        self.assertEqual(
+            files,
+            {
+                "snapshot/docker/sushi/site/index.html": b"edited",
+                "snapshot/docker/sushi/site/new.html": b"untracked",
+            },
+        )
+
+    def test_埋め込み版はシンボリックリンクを含む作業ツリーから生成しない(self) -> None:
+        builder = load("symlink_builder", ROOT / "scripts/build_colab.py")
+        with tempfile.TemporaryDirectory() as temp:
+            source = Path(temp)
+            site = source / "docker/sushi/site"
+            site.mkdir(parents=True)
+            builder.subprocess.run(["git", "init", "-q"], cwd=source, check=True)
+            (site / "link.html").symlink_to("/etc/passwd")
+            with self.assertRaises(ValueError):
+                builder.embedded_archive(source)
+
+    def test_埋め込み版の準備セルは教材の生成元を表示する(self) -> None:
+        builder = load("state_builder", ROOT / "scripts/build_colab.py")
+        state = "HEAD aaaaaaaaaaaa・未コミット変更あり・ZIP sha256 0123456789ab"
+        notebook = builder.build_notebook(COMMIT, embedded="QUJD", state=state)
+        setup = "".join(notebook["cells"][1]["source"])
+        self.assertIn(repr(state), setup)
+        compile(setup, "setup", "exec")
+        self.assertNotIn(
+            repr(state), "".join(builder.build_notebook(COMMIT)["cells"][1]["source"])
+        )
+
+    def test_埋め込み版の生成元は未コミット変更の有無とZIPの要約を示す(self) -> None:
+        builder = load("summary_builder", ROOT / "scripts/build_colab.py")
+        clean = builder.embedded_state(COMMIT, False, b"zip")
+        dirty = builder.embedded_state(COMMIT, True, b"zip")
+        self.assertNotEqual(clean, dirty)
+        self.assertIn(COMMIT[:12], dirty)
+        self.assertIn(builder.hashlib.sha256(b"zip").hexdigest()[:12], dirty)
+        self.assertNotEqual(dirty, builder.embedded_state(COMMIT, True, b"other"))
 
     def test_埋め込みなしの生成は固定コミットから取得し埋め込み版とは準備部分だけが異なる(
         self,

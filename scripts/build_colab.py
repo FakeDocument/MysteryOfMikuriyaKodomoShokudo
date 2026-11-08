@@ -6,12 +6,14 @@ import argparse
 import base64
 import builtins
 import hashlib
+import io
 import json
 import keyword
 import re
 import subprocess
 import textwrap
 import unicodedata
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -28,10 +30,23 @@ def load_lesson() -> dict[str, Any]:
     return colab_assets.load_lesson(ROOT)
 
 
-def source_commit() -> str:
-    commit = subprocess.check_output(
+def head_commit() -> str:
+    return subprocess.check_output(
         ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
     ).strip()
+
+
+def source_commit() -> str:
+    """配布版の取得先。セルと取得する教材の版を揃えるため、未コミット変更を拒否する。"""
+    commit = head_commit()
+    if has_source_changes(commit):
+        raise ValueError(
+            "教材・実行用ソースを先にコミットしてからNotebookを生成してください。"
+        )
+    return commit
+
+
+def has_source_changes(commit: str) -> bool:
     changed = subprocess.run(
         [
             "git",
@@ -58,11 +73,7 @@ def source_commit() -> str:
         cwd=ROOT,
         text=True,
     )
-    if changed.returncode or untracked.strip():
-        raise ValueError(
-            "教材・実行用ソースを先にコミットしてからNotebookを生成してください。"
-        )
-    return commit
+    return bool(changed.returncode or untracked.strip())
 
 
 def cell(kind: str, identifier: str, source: str, form: bool = False) -> dict[str, Any]:
@@ -166,24 +177,49 @@ def block_cells(block: dict[str, Any], chapter_id: str) -> list[dict[str, Any]]:
     return cells
 
 
-def embedded_archive(commit: str) -> bytes:
-    """コミット済みの取得対象だけを、GitHubのZIPと同じ1階層付きでZIP化する。"""
-    return subprocess.check_output(
+def embedded_archive(source: Path = ROOT) -> bytes:
+    """作業ツリーの取得対象を、GitHubのZIPと同じ1階層付きでZIP化する。
+
+    セルも作業ツリーから生成するため、未コミット変更を含めても両者の版は揃う。
+    .gitignore の対象は含めない。
+    """
+    listed = subprocess.check_output(
         [
             "git",
-            "archive",
-            "--format=zip",
-            "--prefix=snapshot/",
-            commit,
+            "ls-files",
+            "-z",
+            "--cached",
+            "--others",
+            "--exclude-standard",
             "--",
             *colab_assets.SOURCE_FILES,
             *colab_assets.SOURCE_DIRS,
         ],
-        cwd=ROOT,
+        cwd=source,
     )
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        for name in sorted(set(listed.decode().split("\0")) - {""}):
+            path = source / name
+            # 展開側でも拒否されるため、生成時点で止めて原因を示す。
+            if path.is_symlink():
+                raise ValueError(f"取得対象にシンボリックリンクがあります: {name}")
+            # 削除済みでまだコミットしていないファイルは含めない。
+            if path.is_file():
+                archive.write(path, "snapshot/" + name)
+    return buffer.getvalue()
 
 
-def build_notebook(commit: str, embedded: str | None = None) -> dict[str, Any]:
+def embedded_state(commit: str, changed: bool, data: bytes) -> str:
+    """埋め込み版で試している教材の生成元を、後から照合できる形で示す。"""
+    revision = "未コミット変更あり" if changed else "未コミット変更なし"
+    digest = hashlib.sha256(data).hexdigest()[:12]
+    return f"HEAD {commit[:12]}・{revision}・ZIP sha256 {digest}"
+
+
+def build_notebook(
+    commit: str, embedded: str | None = None, state: str | None = None
+) -> dict[str, Any]:
     """embedded にbase64の教材ZIPを渡すと、GitHubへ通信しない準備セルにする。"""
     lesson = load_lesson()
     setup = "# @title 1. 調査環境を準備する\n"
@@ -193,6 +229,10 @@ def build_notebook(commit: str, embedded: str | None = None) -> dict[str, Any]:
         bootstrap = "bootstrap_runtime(ROOT, REPOSITORY, SOURCE_COMMIT)"
     else:
         setup += f"EMBEDDED_ARCHIVE = {embedded!r}\n"
+        if state is not None:
+            setup += (
+                f"EMBEDDED_STATE = {state!r}\nprint('埋め込み教材:', EMBEDDED_STATE)\n"
+            )
         bootstrap = "bootstrap_embedded(ROOT, EMBEDDED_ARCHIVE)"
     setup += textwrap.dedent("""\
         import importlib, sys
@@ -304,7 +344,7 @@ def parse_arguments(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--embed",
         action="store_true",
-        help="HEADの教材をZIPで埋め込み、GitHubへ通信しない検証用Notebookを生成する",
+        help="作業ツリーの教材をZIPで埋め込み、GitHubへ通信しない検証用Notebookを生成する",
     )
     arguments = parser.parse_args(argv)
     if not arguments.embed:
@@ -320,15 +360,19 @@ def parse_arguments(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main() -> None:
     arguments = parse_arguments()
-    commit = source_commit()
-    embedded = (
-        base64.b64encode(embedded_archive(commit)).decode("ascii")
-        if arguments.embed
-        else None
-    )
+    embedded = state = None
+    if arguments.embed:
+        commit = head_commit()
+        data = embedded_archive()
+        embedded = base64.b64encode(data).decode("ascii")
+        state = embedded_state(commit, has_source_changes(commit), data)
+    else:
+        commit = source_commit()
     arguments.output.parent.mkdir(parents=True, exist_ok=True)
     arguments.output.write_text(
-        json.dumps(build_notebook(commit, embedded), ensure_ascii=False, indent=1)
+        json.dumps(
+            build_notebook(commit, embedded, state), ensure_ascii=False, indent=1
+        )
         + "\n",
         encoding="utf-8",
     )
