@@ -238,8 +238,6 @@ def build_notebook(
         bootstrap = "bootstrap_embedded(ROOT, EMBEDDED_ARCHIVE)"
     setup += textwrap.dedent("""\
         import importlib, sys
-        if "lab" in globals():
-            lab.stop()
         ROOT = Path("/content/mikuriya-colab")
         BOOTSTRAP
         if str(ROOT) not in sys.path:

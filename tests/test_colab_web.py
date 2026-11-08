@@ -1,7 +1,9 @@
 """Colab版で標的サイトをブラウザから開くための、中継とリンク表示の振る舞いを検証する。"""
 
 import http.client
+import importlib
 import shutil
+import socket
 import sys
 import tempfile
 import threading
@@ -203,6 +205,24 @@ class ProxyTest(unittest.TestCase):
 
         self.assertEqual(response.status, 502)
         self.assertTrue(body)
+
+    def test_モジュールを読み直しても起動中の中継を閉じられる(self) -> None:
+        global web
+        self.addCleanup(web.close_proxies)
+        port = free_port()
+        web.start_proxy("http://mail.example", self.socket_path, port)
+
+        web = importlib.reload(web)
+        web.close_proxies()
+
+        with self.assertRaises(ConnectionRefusedError):
+            socket.create_connection(("127.0.0.1", port), timeout=1).close()
+
+
+def free_port() -> int:
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        return probe.getsockname()[1]
 
 
 class SiteTableTest(unittest.TestCase):

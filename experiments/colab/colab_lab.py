@@ -17,7 +17,14 @@ from pathlib import Path
 from typing import Any
 
 from colab_render import dialogue_html, inline_html, markdown_html, set_site_links
-from colab_web import SITES, Running, colab_url, start_proxy, start_relay
+from colab_web import (
+    SITES,
+    Running,
+    close_proxies,
+    colab_url,
+    start_proxy,
+    start_relay,
+)
 
 TARGET_IP = "172.30.0.10"
 TARGET_HOST = "www.mikuriya-suisan.local"
@@ -354,7 +361,6 @@ class Lab:
             json.loads((root / "lesson.json").read_text()), root / "progress.json"
         )
         self.process: subprocess.Popen | None = None
-        self.web: tuple[Running, ...] = ()
 
     def install_tools(self) -> None:
         if sys.platform != "linux" or os.geteuid() != 0:
@@ -519,17 +525,13 @@ class Lab:
 
     def _open_sites(self) -> None:
         # ブラウザから標的サイトを開けるよう、サイトごとの中継とURLを用意する。
-        self.web = tuple(
+        for site in SITES:
             start_proxy(site.origin, site.socket_path(self.root), site.local_port)
-            for site in SITES
-        )
         set_site_links({site.origin: colab_url(site.local_port) for site in SITES})
 
     def _close_sites(self) -> None:
         set_site_links({})
-        for proxy in self.web:
-            proxy.close()
-        self.web = ()
+        close_proxies()
 
     def _map_user(self, pid: int) -> None:
         for _ in range(200):

@@ -201,8 +201,14 @@ class _ProxyHandler(BaseHTTPRequestHandler):
         pass
 
 
+# 起動中の中継をポートごとに記録する。準備セルの再実行ではこのモジュールを
+# importlib.reloadで読み直すため、前回の記録を引き継いで古い中継を閉じられるようにする。
+_proxies: dict[int, Running] = globals().get("_proxies", {})
+
+
 def start_proxy(origin: str, socket_path: Path, port: int) -> Running:
     """Hostを本来のサイト名へ書き換え、Unixソケット経由で標的へ転送する。"""
+    global _proxies
     server = _ProxyServer(port, origin, socket_path)
     threading.Thread(target=server.serve_forever, daemon=True).start()
 
@@ -210,7 +216,17 @@ def start_proxy(origin: str, socket_path: Path, port: int) -> Running:
         server.shutdown()
         server.server_close()
 
-    return Running(server.server_address[1], close)
+    running = Running(server.server_address[1], close)
+    _proxies = {**_proxies, running.port: running}
+    return running
+
+
+def close_proxies() -> None:
+    """起動中の中継をすべて閉じる。"""
+    global _proxies
+    for running in _proxies.values():
+        running.close()
+    _proxies = {}
 
 
 def colab_url(port: int) -> str:
