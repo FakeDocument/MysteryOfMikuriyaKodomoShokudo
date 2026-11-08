@@ -141,18 +141,28 @@
             "type": "question",
             "id": "ch4_catalog_entry",
             "label": "調査 02",
-            "prompt": "445番のファイル共有を調べ、文書目録に入るための閲覧コードを記録してください。まだログイン情報がなくても、共有一覧を確認できるでしょうか。",
+            "$local": {"prompt": "445番のファイル共有を調べ、文書目録に入るための閲覧コードを記録してください。まだログイン情報がなくても、共有一覧を確認できるでしょうか。"},
+            "$colab": {"prompt": "445番のファイル共有を調べ、文書目録に入るための閲覧コードを記録してください。まだログイン情報がなくても、共有一覧を確認できるでしょうか。2つのWebサイトは `http://kaiiki-hozen.local/` と `http://kaiiki-hozen.local:8080/` から開けます。"},
             "placeholder": "閲覧コード",
             "input_mode": "latin",
             "blocks": [
               {
                 "type": "hints",
                 "id": "hints",
-                "items": [
-                  "第2章で使った共有一覧の確認方法を見返す。今回はIDやパスワードを指定せずに試せる。",
-                  "次のコマンドで共有を列挙できる。`-N` はパスワードを尋ねずに接続する指定。`Sharename` の一覧が出ていれば成功。\n\n```sh\nsmbclient -L //kaiiki-hozen.local -N\n```",
-                  "引継用の共有は次のコマンドで開ける。`README` と端末設定票を読む。\n\n```sh\nsmbclient //kaiiki-hozen.local/handover -N\n```"
-                ]
+                "$local": {
+                  "items": [
+                    "第2章で使った共有一覧の確認方法を見返す。今回はIDやパスワードを指定せずに試せる。",
+                    "次のコマンドで共有を列挙できる。`-N` はパスワードを尋ねずに接続する指定。`Sharename` の一覧が出ていれば成功。\n\n```sh\nsmbclient -L //kaiiki-hozen.local -N\n```",
+                    "引継用の共有は次のコマンドで開ける。`README` と端末設定票を読む。\n\n```sh\nsmbclient //kaiiki-hozen.local/handover -N\n```"
+                  ]
+                },
+                "$colab": {
+                  "items": [
+                    "第2章で使った共有一覧の確認方法を見返す。今回はIDやパスワードを指定せずに試せる。",
+                    "次のコマンドで共有を列挙できる。`-N` はパスワードを尋ねずに接続する指定。`Sharename` の一覧が出ていれば成功。\n\n```sh\nsmbclient -L //kaiiki-hozen.local -N\n```",
+                    "引継用の共有の中身は次のコマンドで確認できる。第2章と同じく `-c` の中で `get` を使って取得し、`README` と端末設定票を読む。\n\n```sh\nsmbclient //kaiiki-hozen.local/handover -N -c 'ls'\n```"
+                  ]
+                }
               }
             ]
           }
