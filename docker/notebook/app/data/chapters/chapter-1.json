@@ -46,10 +46,19 @@
           },
           {
             "speaker": "director",
-            "text": "さあ、こちらをどうぞ。調査用に用意した端末です。必要な道具は一通り入っています。ああ、本案件に関するサイトアクセスはすべてこの端末からしか行えないので注意してくださいね。",
-            "link": {
-              "label": "調査端末を開く",
-              "href": "http://127.0.0.1:6901/vnc.html?autoconnect=true&reconnect=true&reconnect_delay=5000"
+            "$colab": {
+              "text": "`+コード`を押して、コードブロックを作成してみてください。今回はここにコマンドを打ち込んでいきます",
+              "image": {
+                "src": "/static/images/tutorial-add-code.png",
+                "alt": "GoogleColabの画面。+コードにカーソルが合わさっている"
+              }
+            },
+            "$local": {
+              "text": "さあ、こちらをどうぞ。調査用に用意した端末です。必要な道具は一通り入っています。ああ、本案件に関するサイトアクセスはすべてこの端末からしか行えないので注意してくださいね。",
+              "link": {
+                "label": "調査端末を開く",
+                "href": "http://127.0.0.1:6901/vnc.html?autoconnect=true&reconnect=true&reconnect_delay=5000"
+              }
             }
           },
           {

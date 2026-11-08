@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import importlib.util
 import json
 import re
 import shutil
@@ -15,6 +16,7 @@ from urllib.error import URLError
 from urllib.request import urlopen
 
 SOURCE_FILES = (
+    "docker/notebook/app/block_variants.py",
     "experiments/colab/colab_lab.py",
     "experiments/colab/colab_render.py",
     "docker/sushi/samba/smb.conf",
@@ -37,6 +39,13 @@ def source_files(source: Path) -> list[Path]:
 
 
 def load_lesson(source: Path) -> dict[str, Any]:
+    spec = importlib.util.spec_from_file_location(
+        "block_variants", source / "docker/notebook/app/block_variants.py"
+    )
+    if spec is None or spec.loader is None:
+        raise ValueError("ブロックの環境差分処理を読み込めません。")
+    variants = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(variants)
     data = source / "docker/notebook/app/data"
     manifest = json.loads((data / "chapters/manifest.json").read_text(encoding="utf-8"))
     chapters = [
@@ -45,6 +54,7 @@ def load_lesson(source: Path) -> dict[str, Any]:
         ]
         for filename in manifest["chapter_files"]
     ]
+    chapters = variants.resolve_environment(chapters, "$colab")
     answers = json.loads((data / "answers.json").read_text(encoding="utf-8"))["answers"]
     speakers = json.loads(
         (data / "dialogue-speakers.json").read_text(encoding="utf-8")
