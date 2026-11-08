@@ -54,7 +54,6 @@ class Lesson:
         self.questions = {question["id"]: question for question in data["questions"]}
         self.progress_path = progress_path
         self.answers: dict[str, dict[str, str]] = {}
-        self.note = ""
         if progress_path.exists():
             self.restore(json.loads(progress_path.read_text(encoding="utf-8")))
 
@@ -89,9 +88,7 @@ class Lesson:
         if not self._correct(question_id, values):
             return False
         updated = {**self.answers, question_id: dict(values)}
-        write_json(
-            self.progress_path, {"version": 1, "answers": updated, "note": self.note}
-        )
+        write_json(self.progress_path, {"version": 1, "answers": updated})
         self.answers = updated
         return True
 
@@ -106,14 +103,6 @@ class Lesson:
             for block in self.questions[question_id]["blocks"]
             if block["type"] == "dialogue"
         )
-
-    def save_note(self, note: str) -> None:
-        if not isinstance(note, str):
-            raise TypeError("調査メモは文字列にしてください。")
-        write_json(
-            self.progress_path, {"version": 1, "answers": self.answers, "note": note}
-        )
-        self.note = note
 
     def visible(self, block: dict[str, Any], question_id: str | None = None) -> bool:
         condition = block.get("visible_when")
@@ -213,17 +202,6 @@ class Lesson:
                 )
                 + "</details>"
             )
-        if kind == "evidence_note":
-            return (
-                result
-                + "<p>"
-                + html.escape(block["label"])
-                + "</p><p>"
-                + html.escape(block.get("placeholder", ""))
-                + '</p><p style="white-space:pre-wrap">'
-                + html.escape(self.note)
-                + "</p>"
-            )
         if kind == "questions":
             return result
         raise ValueError(f"未対応のブロック種別です: {kind}")
@@ -234,16 +212,12 @@ class Lesson:
         ):
             raise TypeError("進捗ファイルの形式が不正です。")
         answers = progress["answers"]
-        note = progress.get("note", "")
-        if not isinstance(note, str):
-            raise TypeError("調査メモの形式が不正です。")
         if not all(
             self._correct(question, values) for question, values in answers.items()
         ):
             raise ValueError("進捗ファイルに不正な回答があります。")
-        write_json(self.progress_path, {"version": 1, "answers": answers, "note": note})
+        write_json(self.progress_path, {"version": 1, "answers": answers})
         self.answers = {question: dict(values) for question, values in answers.items()}
-        self.note = note
 
 
 def answer_fields(question: dict[str, Any]) -> list[dict[str, Any]]:
@@ -610,23 +584,21 @@ class Lab:
             + inline_html(question["prompt"])
             + "</p>"
         )
-        for index, field in enumerate(answer_fields(question)):
+        for field in answer_fields(question):
             result += (
-                f"<p>answer_{index}："
+                "<p>"
                 + html.escape(field["label"])
-                + " — "
-                + html.escape(field.get("placeholder", ""))
+                + (
+                    " — " + html.escape(field["placeholder"])
+                    if field.get("placeholder")
+                    else ""
+                )
                 + "</p>"
             )
         result += "".join(
             self.lesson.render_block(block, question_id) for block in question["blocks"]
         )
         display(HTML(result))
-
-    def save_note(self, chapter_id: str, note: str) -> None:
-        if self.lesson.chapter_open(chapter_id):
-            self.lesson.save_note(note)
-            print("調査メモを保存しました。")
 
     def stop(self) -> None:
         self._close_sites()

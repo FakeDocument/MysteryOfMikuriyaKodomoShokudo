@@ -4,10 +4,14 @@ from __future__ import annotations
 
 import argparse
 import base64
+import builtins
 import hashlib
 import json
+import keyword
+import re
 import subprocess
 import textwrap
+import unicodedata
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +20,8 @@ import colab_assets
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = ROOT / "experiments/colab/MysteryOfMikuriyaKodomoShokudo-Colab.ipynb"
 REPOSITORY = "FakeDocument/MysteryOfMikuriyaKodomoShokudo"
+# 準備セルとフォームが使う名前は、回答欄の変数名にしない。
+RESERVED_NAMES = frozenset({"lab", "files", "json", "sys", "importlib", "ROOT", "_"})
 
 
 def load_lesson() -> dict[str, Any]:
@@ -74,10 +80,27 @@ def cell(kind: str, identifier: str, source: str, form: bool = False) -> dict[st
     return result
 
 
+def field_variable(label: str, index: int, used: set[str]) -> str:
+    """Colabフォームの欄名として表示される変数名を、回答欄のラベルから決める。"""
+    # Pythonは識別子をNFKC正規化するため、生成側でも揃えて実行時の名前と一致させる。
+    name = re.sub(r"\W+", "_", unicodedata.normalize("NFKC", label)).strip("_")
+    usable = (
+        name.isidentifier()
+        and not keyword.iskeyword(name)
+        and not hasattr(builtins, name)
+        and name not in RESERVED_NAMES
+        and name not in used
+    )
+    return name if usable else f"answer_{index + 1}"
+
+
 def block_cells(block: dict[str, Any], chapter_id: str) -> list[dict[str, Any]]:
     kind = block["type"]
     if kind not in {"dialogue", "document", "evidence_note", "questions", "report"}:
         raise ValueError(f"未対応のブロック種別です: {kind}")
+    # Colabではノートブック自体に記録できるため、調査メモの欄は設けない。
+    if kind == "evidence_note":
+        return []
     identifier = f"{chapter_id}-{block['id']}"
     title = block.get("heading", {}).get("title", kind).replace("\n", " ")
     cells = [
@@ -88,13 +111,6 @@ def block_cells(block: dict[str, Any], chapter_id: str) -> list[dict[str, Any]]:
             form=True,
         )
     ]
-    if kind == "evidence_note":
-        source = (
-            "# @title 調査メモを保存する\n"
-            'evidence_note = lab.lesson.note # @param {type:"string"}\n'
-            f"lab.save_note({chapter_id!r}, evidence_note)\n"
-        )
-        cells.append(cell("code", identifier + "-input", source, form=True))
     if kind == "questions":
         for question in block["items"]:
             for child in question["blocks"]:
@@ -121,6 +137,7 @@ def block_cells(block: dict[str, Any], chapter_id: str) -> list[dict[str, Any]]:
             )
             lines = ["# @title 回答を記録する"]
             values = []
+            used: set[str] = set()
             for index, field in enumerate(fields):
                 parameter = (
                     json.dumps(["", *field["options"]], ensure_ascii=False)
@@ -130,13 +147,13 @@ def block_cells(block: dict[str, Any], chapter_id: str) -> list[dict[str, Any]]:
                 label = field["label"].replace("\n", " ")
                 if field.get("input_mode") == "datetime":
                     label += "（YYYY-MM-DDTHH:MM）"
-                lines.extend(
-                    [
-                        f"# @markdown {label}",
-                        f'answer_{index} = "" # @param {parameter}',
-                    ]
-                )
-                values.append(f"{field['id']!r}: answer_{index}")
+                variable = field_variable(field["label"], index, used)
+                used.add(variable)
+                # 変数名で欄名が伝わらない場合だけ、説明行で元のラベルを補う。
+                if variable != label:
+                    lines.append(f"# @markdown {label}")
+                lines.append(f'{variable} = "" # @param {parameter}')
+                values.append(f"{field['id']!r}: {variable}")
             lines.append(f"_ = lab.answer({question_id!r}, {{{', '.join(values)}}})")
             cells.append(
                 cell(
@@ -224,11 +241,14 @@ def build_notebook(commit: str, embedded: str | None = None) -> dict[str, Any]:
     ]
     for chapter in lesson["chapters"]:
         chapter_id = chapter["id"]
+        title = chapter["nav_title"].replace("\n", " ")
+        # 見出しセルでColabの目次と折りたたみの単位を章ごとにする。
+        cells.append(cell("markdown", chapter_id + "-section", f"## {title}\n"))
         cells.append(
             cell(
                 "code",
                 chapter_id + "-heading",
-                f"# @title {chapter['nav_title']}\nlab.show_chapter({chapter_id!r})\n",
+                f"# @title 章の概要\nlab.show_chapter({chapter_id!r})\n",
                 form=True,
             )
         )
@@ -241,7 +261,7 @@ def build_notebook(commit: str, embedded: str | None = None) -> dict[str, Any]:
                 "finish",
                 """## 調査の中断・再開
 
-同じランタイムなら、準備セルを再実行しても保存済みの正解と調査メモを引き継げます。
+同じランタイムなら、準備セルを再実行しても保存済みの正解を引き継げます。
 Colabのランタイムが削除されると保存ファイルも消えるため、残したい進捗をダウンロードしてください。
 再開時は準備セルを実行し、次の「進捗を読み込む」からファイルを選びます。
 """,

@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "experiments/colab"))
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import colab_assets
 from build_colab import build_notebook
 
 spec = importlib.util.spec_from_file_location(
@@ -185,6 +186,44 @@ class ColabNotebookTests(unittest.TestCase):
             )
         )
         self.assertEqual(commit, source_commit)
+
+    def test_各章のセルは章見出しのセクションにまとまる(self) -> None:
+        notebook = build_notebook("a" * 40)
+        lesson = colab_assets.load_lesson(ROOT)
+        cells = notebook["cells"]
+
+        def heading_level(cell: dict) -> int | None:
+            if cell["cell_type"] != "markdown":
+                return None
+            first = "".join(cell["source"]).lstrip().splitlines()[0]
+            marks = len(first) - len(first.lstrip("#"))
+            return marks or None
+
+        for chapter in lesson["chapters"]:
+            # Colabは見出しセルから次の同階層以上の見出しまでを1セクションとして折りたたむ。
+            start = next(
+                index
+                for index, cell in enumerate(cells)
+                if heading_level(cell) == 2
+                and chapter["nav_title"] in "".join(cell["source"])
+            )
+            end = next(
+                (
+                    index
+                    for index in range(start + 1, len(cells))
+                    if (level := heading_level(cells[index])) is not None
+                    and level <= 2
+                ),
+                len(cells),
+            )
+            owned = [
+                index
+                for index, cell in enumerate(cells)
+                if cell["cell_type"] == "code"
+                and cell["id"].startswith(chapter["id"] + "-")
+            ]
+            self.assertTrue(owned)
+            self.assertTrue(all(start < index < end for index in owned))
 
 
 if __name__ == "__main__":

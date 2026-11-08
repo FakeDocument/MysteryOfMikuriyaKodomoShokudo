@@ -218,7 +218,7 @@ class ColabConversionTests(unittest.TestCase):
         )
         source = "\n".join("".join(cell["source"]) for cell in cells)
         for field in question["answer_fields"]:
-            self.assertIn("# @markdown " + field["label"], source)
+            self.assertIn(field["label"], source)
 
     def test_文書の本文と署名や受付情報を表示できる(self) -> None:
         content = {
@@ -236,7 +236,7 @@ class ColabConversionTests(unittest.TestCase):
         for value in ["原本", "依頼", "本文一", "本文二", "差出人", "記入日", "受付"]:
             self.assertIn(value, text)
 
-    def test_証拠メモの入力セルを生成し保存して再開できる(self) -> None:
+    def test_調査メモはColabのセルを生成しない(self) -> None:
         cells = self.generate(
             {
                 "type": "evidence_note",
@@ -246,24 +246,7 @@ class ColabConversionTests(unittest.TestCase):
                 "action_label": "保存",
             }
         )
-        _, scope = self.execute(cells)
-        assignments = [
-            node
-            for cell in cells
-            for node in ast.parse("".join(cell["source"])).body
-            if isinstance(node, ast.Assign)
-        ]
-        self.assertTrue(assignments)
-        self.lab.lesson.save_note("見つけた事実")
-        restored = runtime.Lab(self.root)
-        self.assertEqual(restored.lesson.note, "見つけた事実")
-        self.assertTrue(
-            any(
-                isinstance(value, str)
-                for key, value in scope.items()
-                if key != "__builtins__"
-            )
-        )
+        self.assertEqual(cells, [])
 
     def test_設問の説明と回答フォームを生成し単一欄を判定できる(self) -> None:
         output, scope = self.execute(
@@ -272,7 +255,7 @@ class ColabConversionTests(unittest.TestCase):
             )
         )
         self.assertIn(self.question["prompt"], "".join(Markup(output).text))
-        self.assertTrue(any(key.startswith("answer_") for key in scope))
+        self.assertIn("回答", scope)
         self.assertTrue(self.lab.lesson.submit("sample", {"answer": "result"}))
 
     def test_複数回答欄の入力セルを生成し順序を保って判定する(self) -> None:
@@ -289,13 +272,43 @@ class ColabConversionTests(unittest.TestCase):
             {"type": "questions", "id": "questions", "items": [question]}
         )
         _, scope = self.execute(cells)
-        self.assertGreaterEqual(
-            len([key for key in scope if key.startswith("answer_")]), 2
-        )
+        # Colabフォームは変数名を欄名として表示するため、ラベルを変数名にする。
+        for field in question["answer_fields"]:
+            self.assertIn(field["label"], scope)
         self.lab.lesson.questions["sample"]["accepted"] = ["alpha\tbeta"]
         self.assertTrue(
             self.lab.lesson.submit("sample", {"first": "alpha", "second": "beta"})
         )
+
+    def test_変数名に使えないラベルでも教材の操作を壊さず欄を区別できる(self) -> None:
+        question = {
+            key: value
+            for key, value in self.question.items()
+            if key not in {"input_mode", "placeholder"}
+        }
+        labels = ["lab", "class", "print", "値 一", "値・二", "値三", "値三", "1番"]
+        question["answer_fields"] = [
+            {"id": f"field{index}", "label": label, "input_mode": "text"}
+            for index, label in enumerate(labels)
+        ]
+        cells = self.generate(
+            {"type": "questions", "id": "questions", "items": [question]}
+        )
+        _, scope = self.execute(cells)
+        self.assertIs(scope["lab"], self.lab)
+        self.assertNotIn("print", scope)
+        answer_call = next(
+            node
+            for cell in cells
+            for node in ast.walk(ast.parse("".join(cell["source"])))
+            if isinstance(node, ast.Dict) and node.keys
+        )
+        variables = [value.id for value in answer_call.values]
+        self.assertEqual(
+            [key.value for key in answer_call.keys],
+            [field["id"] for field in question["answer_fields"]],
+        )
+        self.assertEqual(len(set(variables)), len(labels))
 
     def test_選択式と日時の回答欄も生成できる(self) -> None:
         question = {
@@ -493,8 +506,11 @@ class ColabConversionTests(unittest.TestCase):
             )
         for chapter in lesson["chapters"]:
             for block in chapter["blocks"]:
+                cells = builder.block_cells(block, chapter["id"])
+                if not cells:
+                    continue
                 with self.subTest(chapter=chapter["id"], block=block["id"]):
-                    output, _ = self.execute(builder.block_cells(block, chapter["id"]))
+                    output, _ = self.execute(cells)
                     self.assertTrue(output)
 
     def test_前の章の完了まで次章の本文と回答を開かない(self) -> None:
