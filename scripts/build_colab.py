@@ -161,6 +161,8 @@ def build_notebook(commit: str) -> dict[str, Any]:
         bootstrap_runtime(ROOT, REPOSITORY, SOURCE_COMMIT)
         if str(ROOT) not in sys.path:
             sys.path.insert(0, str(ROOT))
+        import colab_web
+        importlib.reload(colab_web)
         import colab_render
         importlib.reload(colab_render)
         import colab_lab

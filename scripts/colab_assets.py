@@ -19,6 +19,7 @@ SOURCE_FILES = (
     "docker/notebook/app/block_variants.py",
     "experiments/colab/colab_lab.py",
     "experiments/colab/colab_render.py",
+    "experiments/colab/colab_web.py",
     "docker/sushi/samba/smb.conf",
 )
 SOURCE_DIRS = (
@@ -90,7 +91,7 @@ def prepare_from_source(source: Path, root: Path) -> None:
         (staging / "account.json").write_text(
             json.dumps({"username": username, "password": password}), encoding="utf-8"
         )
-        for name in ("colab_lab.py", "colab_render.py"):
+        for name in ("colab_lab.py", "colab_render.py", "colab_web.py"):
             shutil.copyfile(source / "experiments/colab" / name, staging / name)
         shutil.copyfile(source / "docker/sushi/samba/smb.conf", staging / "smb.conf.in")
         for directory, destination in (

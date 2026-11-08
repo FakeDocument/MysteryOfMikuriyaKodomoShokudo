@@ -5,7 +5,9 @@ from __future__ import annotations
 import base64
 import html
 import re
+from collections.abc import Mapping
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -15,8 +17,40 @@ def terminal_link(href: str) -> bool:
     return parsed.hostname in {"127.0.0.1", "localhost"} and parsed.port == 6901
 
 
+# 本文中のサイトURLを、Colabがセッションごとに発行する中継URLへつなぐ。
+_site_links: Mapping[str, str] = MappingProxyType({})
+
+
+def set_site_links(links: Mapping[str, str]) -> None:
+    global _site_links
+    _site_links = MappingProxyType(
+        {origin.rstrip("/"): url for origin, url in links.items()}
+    )
+
+
+def _linked_sites(escaped: str) -> str:
+    if not _site_links:
+        return escaped
+    # 長いオリジンを先に照合し、ポート付きのURLを別サイトとして扱う。
+    origins = sorted(_site_links, key=len, reverse=True)
+    pattern = (
+        "("
+        + "|".join(re.escape(origin) for origin in origins)
+        + r")(?![\w.:-])(/[A-Za-z0-9._~/%-]*)?"
+    )
+
+    def link(match: re.Match[str]) -> str:
+        href = _site_links[match[1]].rstrip("/") + (match[2] or "/")
+        return (
+            f'<a href="{html.escape(href)}" target="_blank" '
+            f'rel="noopener noreferrer">{match[0]}</a>'
+        )
+
+    return re.sub(pattern, link, escaped)
+
+
 def inline_html(value: str) -> str:
-    escaped = html.escape(value)
+    escaped = _linked_sites(html.escape(value))
     return re.sub(
         r"`([^`\n]+)`|\*\*([^*\n]+)\*\*",
         lambda match: (

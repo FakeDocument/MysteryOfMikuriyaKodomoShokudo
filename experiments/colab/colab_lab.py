@@ -16,7 +16,8 @@ import unicodedata
 from pathlib import Path
 from typing import Any
 
-from colab_render import dialogue_html, inline_html, markdown_html
+from colab_render import dialogue_html, inline_html, markdown_html, set_site_links
+from colab_web import SITES, Running, colab_url, start_proxy, start_relay
 
 TARGET_IP = "172.30.0.10"
 TARGET_HOST = "www.mikuriya-suisan.local"
@@ -303,6 +304,7 @@ class Lab:
             json.loads((root / "lesson.json").read_text()), root / "progress.json"
         )
         self.process: subprocess.Popen | None = None
+        self.web: tuple[Running, ...] = ()
 
     def install_tools(self) -> None:
         if sys.platform != "linux" or os.geteuid() != 0:
@@ -358,8 +360,11 @@ class Lab:
         nginx = (
             f"pid {self.root}/run/nginx.pid; error_log {self.root}/nginx.log;\n"
             "events {} http { include /etc/nginx/mime.types; access_log off;\n"
-            f"server {{ listen {TARGET_IP}:80; root {self.root}/site; "
-            "index index.html; charset utf-8; location / { try_files $uri $uri/ =404; } } }\n"
+            f"server {{ listen {TARGET_IP}:80 default_server; root {self.root}/site; "
+            "index index.html; charset utf-8; location / { try_files $uri $uri/ =404; } }\n"
+            # 社内Webメールは未移植のため、寿司屋HPを誤って表示しない。
+            f"server {{ listen {TARGET_IP}:80; server_name mail.mikuriya-suisan.local; "
+            "return 404; } }\n"
         )
         (self.root / "nginx.conf").write_text(nginx)
         samba = (
@@ -451,6 +456,7 @@ class Lab:
                     raise RuntimeError((self.root / "startup.log").read_text()[-4000:])
                 if ready.exists():
                     self._register_commands()
+                    self._open_sites()
                     print("準備ができました。コードセルから調査を始められます。")
                     return
                 time.sleep(0.1)
@@ -460,6 +466,20 @@ class Lab:
         except BaseException:
             self.stop()
             raise
+
+    def _open_sites(self) -> None:
+        # ブラウザから標的サイトを開けるよう、サイトごとの中継とURLを用意する。
+        self.web = tuple(
+            start_proxy(site.origin, site.socket_path(self.root), site.local_port)
+            for site in SITES
+        )
+        set_site_links({site.origin: colab_url(site.local_port) for site in SITES})
+
+    def _close_sites(self) -> None:
+        set_site_links({})
+        for proxy in self.web:
+            proxy.close()
+        self.web = ()
 
     def _map_user(self, pid: int) -> None:
         for _ in range(200):
@@ -609,6 +629,7 @@ class Lab:
             print("調査メモを保存しました。")
 
     def stop(self) -> None:
+        self._close_sites()
         try:
             pid = active_worker(self.root)
         except (FileNotFoundError, ProcessLookupError):
@@ -648,12 +669,18 @@ def serve(root: Path) -> None:
         ],
     )
     processes: list[subprocess.Popen] = []
+    relays: list[Running] = []
 
     def shutdown(_signal: int, _frame: Any) -> None:
         raise SystemExit(0)
 
     signal.signal(signal.SIGTERM, shutdown)
     try:
+        # カーネル側の中継が、このネットワーク内の標的サイトへ届くようにする。
+        relays.extend(
+            start_relay(site.socket_path(root), site.address, site.port)
+            for site in SITES
+        )
         # smbdは標準入力がEOFになると終了するため、監督プロセスがパイプを保持する。
         for command in commands:
             processes.append(
@@ -690,6 +717,8 @@ def serve(root: Path) -> None:
                 raise RuntimeError("標的サービスが停止しました。")
             time.sleep(0.25)
     finally:
+        for relay in relays:
+            relay.close()
         for process in processes:
             if process.poll() is None:
                 os.killpg(process.pid, signal.SIGTERM)
