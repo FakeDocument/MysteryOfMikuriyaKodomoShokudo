@@ -1,7 +1,8 @@
-"""固定したGitHubコミットからColabの教材・実行用ファイルを準備する。"""
+"""固定したGitHubコミット、またはNotebookに埋め込んだZIPからColabの教材・実行用ファイルを準備する。"""
 
 from __future__ import annotations
 
+import base64
 import io
 import importlib.util
 import json
@@ -110,7 +111,7 @@ def prepare_from_source(source: Path, root: Path) -> None:
             shutil.move(str(asset), str(destination))
 
 
-def bootstrap_runtime(root: Path, repository: str, commit: str) -> None:
+def fetch_archive(repository: str, commit: str) -> bytes:
     if not re.fullmatch(r"[0-9a-f]{40}", commit):
         raise ValueError("取得先は40桁のコミットSHAで固定してください。")
     if not re.fullmatch(
@@ -120,11 +121,15 @@ def bootstrap_runtime(root: Path, repository: str, commit: str) -> None:
     url = f"https://codeload.github.com/{repository}/zip/{commit}"
     try:
         with urlopen(url, timeout=45) as response:
-            data = response.read()
+            return response.read()
     except (URLError, TimeoutError) as error:
         raise RuntimeError(
             "GitHubから教材を取得できませんでした。接続を確認し、準備セルを再実行してください。"
         ) from error
+
+
+def install_archive(root: Path, data: bytes) -> None:
+    """先頭に1階層を持つ教材ZIPから、取得対象だけを検証して配置する。"""
     with (
         tempfile.TemporaryDirectory() as temporary,
         zipfile.ZipFile(io.BytesIO(data)) as archive,
@@ -150,3 +155,12 @@ def bootstrap_runtime(root: Path, repository: str, commit: str) -> None:
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_bytes(archive.read(member))
         prepare_from_source(source, root)
+
+
+def bootstrap_runtime(root: Path, repository: str, commit: str) -> None:
+    install_archive(root, fetch_archive(repository, commit))
+
+
+def bootstrap_embedded(root: Path, encoded: str) -> None:
+    """Notebookに埋め込んだ教材ZIPから、通信せずに準備する。"""
+    install_archive(root, base64.b64decode(encoded, validate=True))

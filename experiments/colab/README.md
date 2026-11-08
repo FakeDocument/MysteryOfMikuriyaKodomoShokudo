@@ -50,6 +50,14 @@ uv run --no-project python -m unittest discover -s tests -v
 
 手元で生成を確認する場合は `uv run --no-project python scripts/build_colab.py --output /tmp/mikuriya-colab.ipynb` を使う。取得先を現在のHEADに固定するため、このコマンドは教材・実行用ソースの未コミット変更を検出すると停止する。
 
+pushしていないコミットをColab実機で試す場合は、`--embed` を付けて生成する。
+
+```sh
+uv run --no-project python scripts/build_colab.py --embed --output /tmp/mikuriya-colab-embed.ipynb
+```
+
+HEADの取得対象ファイルを `git archive` でZIP化し、base64で準備セルへ埋め込む。準備セルはGitHubから教材を取得せず、埋め込んだZIPを通常版と同じ検証・配置処理で展開する。APTによるツールの導入には通信が必要。未コミット変更の確認は通常版と同じ。配布用ノートブックを上書きしないよう、`--output` の指定が必要で、配布用のパスは指定できない。生成物は数MBになるため、Colabの「ノートブックをアップロード」から開く。リポジトリにはコミットしない。
+
 実サービスの統合テストは、ノートブックの準備が完了した専用Linux環境で実行する。`MIKURIYA_COLAB_INTEGRATION_ROOT` には展開済みの教材ディレクトリを指定する。通常のテスト実行ではこの統合テストをスキップする。
 
 ```sh

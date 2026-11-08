@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
 import json
 import subprocess
@@ -148,17 +149,40 @@ def block_cells(block: dict[str, Any], chapter_id: str) -> list[dict[str, Any]]:
     return cells
 
 
-def build_notebook(commit: str) -> dict[str, Any]:
+def embedded_archive(commit: str) -> bytes:
+    """コミット済みの取得対象だけを、GitHubのZIPと同じ1階層付きでZIP化する。"""
+    return subprocess.check_output(
+        [
+            "git",
+            "archive",
+            "--format=zip",
+            "--prefix=snapshot/",
+            commit,
+            "--",
+            *colab_assets.SOURCE_FILES,
+            *colab_assets.SOURCE_DIRS,
+        ],
+        cwd=ROOT,
+    )
+
+
+def build_notebook(commit: str, embedded: str | None = None) -> dict[str, Any]:
+    """embedded にbase64の教材ZIPを渡すと、GitHubへ通信しない準備セルにする。"""
     lesson = load_lesson()
     setup = "# @title 1. 調査環境を準備する\n"
     setup += Path(colab_assets.__file__).read_text(encoding="utf-8")
     setup += f"\nSOURCE_COMMIT = {commit!r}\nREPOSITORY = {REPOSITORY!r}\n"
+    if embedded is None:
+        bootstrap = "bootstrap_runtime(ROOT, REPOSITORY, SOURCE_COMMIT)"
+    else:
+        setup += f"EMBEDDED_ARCHIVE = {embedded!r}\n"
+        bootstrap = "bootstrap_embedded(ROOT, EMBEDDED_ARCHIVE)"
     setup += textwrap.dedent("""\
         import importlib, sys
         if "lab" in globals():
             lab.stop()
         ROOT = Path("/content/mikuriya-colab")
-        bootstrap_runtime(ROOT, REPOSITORY, SOURCE_COMMIT)
+        BOOTSTRAP
         if str(ROOT) not in sys.path:
             sys.path.insert(0, str(ROOT))
         import colab_web
@@ -170,12 +194,17 @@ def build_notebook(commit: str) -> dict[str, Any]:
         lab = colab_lab.Lab(ROOT)
         lab.install_tools()
         lab.start()
-        """)
+        """).replace("BOOTSTRAP", bootstrap)
+    origin = (
+        "固定した版の教材をGitHubから取得し"
+        if embedded is None
+        else "ノートブックに同梱した教材を展開し"
+    )
     cells = [
         cell(
             "markdown",
             "introduction",
-            """# 御厨こども食堂の謎：Colab試作
+            f"""# 御厨こども食堂の謎：Colab試作
 
 既存の章JSONから、序章から終章までの教材を生成したノートブックです。
 
@@ -187,7 +216,7 @@ def build_notebook(commit: str) -> dict[str, Any]:
 
 標的環境は寿司屋のWeb・Sambaを起動する試作です。後続章のWebメールや政府側サービスのColab対応は準備中です。
 
-準備セルで、固定した版の教材をGitHubから取得し、必要なツールを導入します。
+準備セルで、{origin}、必要なツールを導入します。
 進捗はランタイム内へ保存します。終了後も残したい場合は、末尾のセルから進捗ファイルをダウンロードしてください。
 """,
         ),
@@ -249,13 +278,38 @@ Colabのランタイムが削除されると保存ファイルも消えるため
     }
 
 
-def main() -> None:
+def parse_arguments(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
-    arguments = parser.parse_args()
+    parser.add_argument("--output", type=Path)
+    parser.add_argument(
+        "--embed",
+        action="store_true",
+        help="HEADの教材をZIPで埋め込み、GitHubへ通信しない検証用Notebookを生成する",
+    )
+    arguments = parser.parse_args(argv)
+    if not arguments.embed:
+        arguments.output = arguments.output or DEFAULT_OUTPUT
+        return arguments
+    # 検証用の埋め込み版で、配布用Notebookを上書きしない。
+    if arguments.output is None:
+        parser.error("--embed には --output で配布用以外の出力先を指定してください。")
+    if arguments.output.resolve() == DEFAULT_OUTPUT.resolve():
+        parser.error("--embed の出力先に配布用Notebookは指定できません。")
+    return arguments
+
+
+def main() -> None:
+    arguments = parse_arguments()
+    commit = source_commit()
+    embedded = (
+        base64.b64encode(embedded_archive(commit)).decode("ascii")
+        if arguments.embed
+        else None
+    )
     arguments.output.parent.mkdir(parents=True, exist_ok=True)
     arguments.output.write_text(
-        json.dumps(build_notebook(source_commit()), ensure_ascii=False, indent=1) + "\n",
+        json.dumps(build_notebook(commit, embedded), ensure_ascii=False, indent=1)
+        + "\n",
         encoding="utf-8",
     )
     print(f"ノートブックを生成しました: {arguments.output}")
