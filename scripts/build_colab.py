@@ -114,67 +114,67 @@ def block_cells(block: dict[str, Any], chapter_id: str) -> list[dict[str, Any]]:
         return []
     identifier = f"{chapter_id}-{block['id']}"
     title = block.get("heading", {}).get("title", kind).replace("\n", " ")
-    cells = [
-        cell(
-            "code",
-            identifier,
-            f"# @title {title}\nlab.show_block({chapter_id!r}, {block['id']!r})\n",
-            form=True,
-        )
+    if kind != "questions":
+        return [
+            cell(
+                "code",
+                identifier,
+                f"# @title {title}\nlab.show_block({chapter_id!r}, {block['id']!r})\n",
+                form=True,
+            )
+        ]
+    # 設問群の見出しは題名へ含め、設問の表示から回答までを1セルで行う。
+    return [
+        question_cell(question, f"{identifier}-{question['id']}", title)
+        for question in block["items"]
     ]
-    if kind == "questions":
-        for question in block["items"]:
-            for child in question["blocks"]:
-                if child["type"] not in {"hints", "dialogue"}:
-                    raise ValueError(f"未対応の設問内ブロックです: {child['type']}")
-            question_id = question["id"]
-            cells.append(
-                cell(
-                    "code",
-                    identifier + "-" + question_id,
-                    f"# @title 設問とヒントを表示する\nlab.show_question({question_id!r})\n",
-                    form=True,
-                )
-            )
-            fields = question.get(
-                "answer_fields",
-                [
-                    {
-                        "id": "answer",
-                        "label": "回答",
-                        "input_mode": question.get("input_mode", "text"),
-                    }
-                ],
-            )
-            lines = ["# @title 回答を記録する"]
-            values = []
-            used: set[str] = set()
-            for index, field in enumerate(fields):
-                parameter = (
-                    json.dumps(["", *field["options"]], ensure_ascii=False)
-                    if field.get("input_mode") == "select"
-                    else '{type:"string"}'
-                )
-                label = field["label"].replace("\n", " ")
-                if field.get("input_mode") == "datetime":
-                    label += "（YYYY-MM-DDTHH:MM）"
-                variable = field_variable(field["label"], index, used)
-                used.add(variable)
-                # 変数名で欄名が伝わらない場合だけ、説明行で元のラベルを補う。
-                if variable != label:
-                    lines.append(f"# @markdown {label}")
-                lines.append(f'{variable} = "" # @param {parameter}')
-                values.append(f"{field['id']!r}: {variable}")
-            lines.append(f"_ = lab.answer({question_id!r}, {{{', '.join(values)}}})")
-            cells.append(
-                cell(
-                    "code",
-                    identifier + "-" + question_id + "-answer",
-                    "\n".join(lines) + "\n",
-                    form=True,
-                )
-            )
-    return cells
+
+
+def question_cell(
+    question: dict[str, Any], identifier: str, title: str
+) -> dict[str, Any]:
+    for child in question["blocks"]:
+        if child["type"] not in {"hints", "dialogue"}:
+            raise ValueError(f"未対応の設問内ブロックです: {child['type']}")
+    fields = question.get(
+        "answer_fields",
+        [
+            {
+                "id": "answer",
+                "label": "回答",
+                "input_mode": question.get("input_mode", "text"),
+                "placeholder": question.get("placeholder", ""),
+            }
+        ],
+    )
+    label = question["label"].replace("\n", " ")
+    lines = [f"# @title {title}（{label}）"]
+    # フォームでは @markdown 行が入力欄の上に出るため、何を答えるかを先に示す。
+    lines.extend(f"# @markdown {line}" for line in question["prompt"].splitlines())
+    values = []
+    used: set[str] = set()
+    for index, field in enumerate(fields):
+        parameter = (
+            json.dumps(["", *field["options"]], ensure_ascii=False)
+            if field.get("input_mode") == "select"
+            else '{type:"string"}'
+        )
+        field_label = field["label"].replace("\n", " ")
+        description = field_label
+        if field.get("input_mode") == "datetime":
+            # Colabのフォームに日時の選択欄はないため、入力形式を示す。
+            description += "（YYYY-MM-DDTHH:MM）"
+        elif field.get("placeholder") not in {None, "", field["label"]}:
+            description += f"（{field['placeholder']}）"
+        variable = field_variable(field["label"], index, used)
+        used.add(variable)
+        # 変数名だけで欄名と入力形式が伝わる場合は、説明行を省く。
+        if variable != description:
+            lines.append(f"# @markdown {description}")
+        lines.append(f'{variable} = "" # @param {parameter}')
+        values.append(f"{field['id']!r}: {variable}")
+    lines.append(f"_ = lab.ask({question['id']!r}, {{{', '.join(values)}}})")
+    return cell("code", identifier, "\n".join(lines) + "\n", form=True)
 
 
 def embedded_archive(source: Path = ROOT) -> bytes:
@@ -222,7 +222,7 @@ def build_notebook(
 ) -> dict[str, Any]:
     """embedded にbase64の教材ZIPを渡すと、GitHubへ通信しない準備セルにする。"""
     lesson = load_lesson()
-    setup = "# @title 1. 調査環境を準備する\n"
+    setup = "# @title 調査環境を準備する\n"
     setup += Path(colab_assets.__file__).read_text(encoding="utf-8")
     setup += f"\nSOURCE_COMMIT = {commit!r}\nREPOSITORY = {REPOSITORY!r}\n"
     if embedded is None:
@@ -263,13 +263,12 @@ def build_notebook(
             "introduction",
             f"""# 御厨こども食堂の謎：Colab試作
 
-既存の章JSONから、序章から終章までの教材を生成したノートブックです。
-
 1. Googleアカウントでログインし、ランタイムは **CPU** を選びます。
 2. 「調査環境を準備する」の左にある ▶ を押し、準備完了まで待ちます。
-3. 上から表示セルを実行し、会話と設問を読み進めます。
-4. 調査には「＋コード」でセルを追加し、自分でコマンドを入力します。シェルコマンドの先頭には `!` を付けます。
-5. 正解後は続く表示セルを実行します。条件付きのセルを先に実行した場合は、正解後に再実行してください。
+3. 上から順にセルを実行し、会話と設問を読み進めます。
+4. 設問のセルでは、回答欄の上に問われている内容が表示されます。実行するとヒントを表示し、回答欄に入力してから実行すると判定します。
+5. 調査には「＋コード」でセルを追加し、自分でコマンドを入力します。シェルコマンドの先頭には `!` を付けます。
+6. 正解すると続くセルを読めるようになります。先に実行して表示されなかったセルは、正解後に再実行してください。
 
 標的環境は寿司屋のWeb・Sambaを起動する試作です。後続章のWebメールや政府側サービスのColab対応は準備中です。
 
@@ -284,14 +283,6 @@ def build_notebook(
         title = chapter["nav_title"].replace("\n", " ")
         # 見出しセルでColabの目次と折りたたみの単位を章ごとにする。
         cells.append(cell("markdown", chapter_id + "-section", f"## {title}\n"))
-        cells.append(
-            cell(
-                "code",
-                chapter_id + "-heading",
-                f"# @title 章の概要\nlab.show_chapter({chapter_id!r})\n",
-                form=True,
-            )
-        )
         for block in chapter["blocks"]:
             cells.extend(block_cells(block, chapter_id))
     cells.extend(

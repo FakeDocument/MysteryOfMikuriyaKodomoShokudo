@@ -510,20 +510,31 @@ class Lab:
             check=True,
         )
 
-    def answer(self, question_id: str, values: dict[str, str]) -> bool:
+    def ask(self, question_id: str, values: dict[str, str]) -> bool:
+        """設問を表示し、回答欄が入力されていれば判定する。"""
         from IPython.display import HTML, display
 
         if not self.lesson.question_open(question_id):
-            print("先に前の設問へ回答し、表示セルを実行してください。")
+            print("必要な設問に正解してから、このセルを再実行してください。")
             return False
-        correct = self.lesson.submit(question_id, values)
+        # 初回は設問を読むために実行されるため、空欄を誤答として扱わない。
+        is_blank = not any(value.strip() for value in values.values())
+        correct = (
+            self.lesson.is_solved(question_id)
+            if is_blank
+            else self.lesson.submit(question_id, values)
+        )
+        markup = self._question_html(question_id)
         if correct:
-            display(
-                HTML(
-                    '<p style="color:#214d40;font-weight:bold">正解です。</p>'
-                    + self.lesson.follow_up(question_id)
-                )
+            markup += (
+                '<p style="color:#214d40;font-weight:bold">正解です。</p>'
+                + self.lesson.follow_up(question_id)
             )
+        display(HTML(markup))
+        if correct:
+            return True
+        if is_blank:
+            print("上の回答欄に入力し、このセルを再実行してください。")
         else:
             print(
                 self.lesson.questions[question_id].get(
@@ -531,30 +542,7 @@ class Lab:
                     "調査結果と一致しません。証拠をもう一度確認してください。",
                 )
             )
-        return correct
-
-    def show_chapter(self, chapter_id: str) -> None:
-        from IPython.display import HTML, display
-
-        if not self.lesson.chapter_open(chapter_id):
-            print("前の章の設問を完了すると、この章を表示できます。")
-            return
-        chapter = next(
-            chapter
-            for chapter in self.lesson.data["chapters"]
-            if chapter["id"] == chapter_id
-        )
-        display(
-            HTML(
-                "<h2>"
-                + html.escape(chapter["title"])
-                + "</h2>"
-                + "".join(
-                    "<p>" + inline_html(chapter.get(key, "")) + "</p>"
-                    for key in ("date", "objective", "lead")
-                )
-            )
-        )
+        return False
 
     def show_block(self, chapter_id: str, block_id: str) -> None:
         from IPython.display import HTML, display
@@ -570,35 +558,14 @@ class Lab:
             return
         display(HTML(self.lesson.render_block(block)))
 
-    def show_question(self, question_id: str) -> None:
-        from IPython.display import HTML, display
-
-        if not self.lesson.question_open(question_id):
-            print("必要な設問に正解してから、このセルを再実行してください。")
-            return
+    def _question_html(self, question_id: str) -> str:
+        """ヒントを返す。設問文と入力形式はセルのフォームに、正解後の会話は follow_up が出す。"""
         question = self.lesson.questions[question_id]
-        result = (
-            "<h4>"
-            + html.escape(question["label"])
-            + "</h4><p>"
-            + inline_html(question["prompt"])
-            + "</p>"
+        return "".join(
+            self.lesson.render_block(block, question_id)
+            for block in question["blocks"]
+            if block["type"] != "dialogue"
         )
-        for field in answer_fields(question):
-            result += (
-                "<p>"
-                + html.escape(field["label"])
-                + (
-                    " — " + html.escape(field["placeholder"])
-                    if field.get("placeholder")
-                    else ""
-                )
-                + "</p>"
-            )
-        result += "".join(
-            self.lesson.render_block(block, question_id) for block in question["blocks"]
-        )
-        display(HTML(result))
 
     def stop(self) -> None:
         self._close_sites()

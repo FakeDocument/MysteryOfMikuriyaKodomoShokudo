@@ -249,14 +249,93 @@ class ColabConversionTests(unittest.TestCase):
         self.assertEqual(cells, [])
 
     def test_設問の説明と回答フォームを生成し単一欄を判定できる(self) -> None:
-        output, scope = self.execute(
+        cells = self.generate(
+            {"type": "questions", "id": "questions", "items": [self.question]}
+        )
+        _, scope = self.execute(cells)
+        self.assertIn(self.question["prompt"], "".join(cells[0]["source"]))
+        self.assertIn("回答", scope)
+        self.assertTrue(self.lab.lesson.submit("sample", {"answer": "result"}))
+
+    def test_回答欄より前のフォームに設問文と入力形式の補足を表示する(self) -> None:
+        question = {
+            key: value
+            for key, value in self.question.items()
+            if key not in {"input_mode", "placeholder"}
+        }
+        question["answer_fields"] = [
+            {"id": "port", "label": "番号", "placeholder": "例: 80"},
+        ]
+        single = {**self.question, "id": "single"}
+        for item in (question, single):
+            [cell] = builder.block_cells(
+                {"type": "questions", "id": "questions", "items": [item]}, "chapter"
+            )
+            lines = "".join(cell["source"]).splitlines()
+            # Colabのフォームでは @markdown 行が説明文、@param 行が入力欄になる。
+            first_field = next(i for i, line in enumerate(lines) if "@param" in line)
+            form_text = "\n".join(
+                line for line in lines[:first_field] if line.startswith("# @markdown")
+            )
+            placeholder = (
+                item["answer_fields"][0]["placeholder"]
+                if "answer_fields" in item
+                else item["placeholder"]
+            )
+            with self.subTest(question=item["id"]):
+                self.assertIn(item["prompt"], form_text)
+                self.assertIn(placeholder, form_text)
+
+    def test_設問ごとに説明と回答欄を1つのセルにまとめる(self) -> None:
+        second = {**self.question, "id": "second", "prompt": "次の値は？"}
+        cells = self.generate(
+            {
+                "type": "questions",
+                "id": "questions",
+                "heading": {"title": "記録する"},
+                "items": [self.question, second],
+            }
+        )
+        self.assertEqual(len(cells), 2)
+        for cell, question in zip(cells, [self.question, second]):
+            self.execute([cell])
+            source = "".join(cell["source"])
+            self.assertIn(question["prompt"], source)
+            # 設問群の見出しは、設問セルの題名で伝える。
+            self.assertIn("記録する", source)
+
+    def test_回答欄が空のまま実行しても回答として記録しない(self) -> None:
+        self.execute(
             self.generate(
                 {"type": "questions", "id": "questions", "items": [self.question]}
             )
         )
-        self.assertIn(self.question["prompt"], "".join(Markup(output).text))
-        self.assertIn("回答", scope)
-        self.assertTrue(self.lab.lesson.submit("sample", {"answer": "result"}))
+        self.assertFalse(self.lab.lesson.is_solved("sample"))
+
+    def test_回答欄を埋めて実行すると判定し正解後の会話を表示する(self) -> None:
+        question = deepcopy(self.question)
+        question["blocks"] = [
+            {
+                "type": "dialogue",
+                "id": "follow-up",
+                "visible_when": {"event": "question_solved"},
+                "messages": [{"speaker": "narrator", "text": "解放された会話"}],
+            }
+        ]
+        self.generate({"type": "questions", "id": "questions", "items": [question]})
+        output = []
+        display = SimpleNamespace(
+            HTML=str, display=lambda value: output.append(str(value))
+        )
+        with (
+            patch.dict(sys.modules, {"IPython.display": display}),
+            contextlib.redirect_stdout(io.StringIO()) as printed,
+        ):
+            self.assertFalse(self.lab.ask("sample", {"answer": "wrong"}))
+            self.assertTrue(self.lab.ask("sample", {"answer": "result"}))
+        self.assertTrue(self.lab.lesson.is_solved("sample"))
+        self.assertTrue(printed.getvalue())
+        self.assertIn("解放された会話", "\n".join(output))
 
     def test_複数回答欄の入力セルを生成し順序を保って判定する(self) -> None:
         question = {
