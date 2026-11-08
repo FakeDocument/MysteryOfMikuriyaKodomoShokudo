@@ -31,15 +31,18 @@
           },
           {
             "speaker": "director",
-            "text": "調査端末のターミナルで、次のコマンドを入力してください。\n\n```sh\nsmbclient -L //www.mikuriya-suisan.local -U kanzaki\n```\n\n`-L` は共有の一覧表示、`-U` はログインに使うアカウントIDの指定です。"
+            "$local": {"text": "調査端末のターミナルで、次のコマンドを入力してください。\n\n```sh\nsmbclient -L //www.mikuriya-suisan.local -U kanzaki\n```\n\n`-L` は共有の一覧表示、`-U` はログインに使うアカウントIDの指定です。"},
+            "$colab": {"text": "コードセルで、次のコマンドを実行してください。\n\n```sh\nsmbclient -L //www.mikuriya-suisan.local -U 'kanzaki%Kanzaki2018'\n```\n\n`-L` は共有の一覧表示、`-U` はログインに使うアカウントIDの指定です。IDの後ろに `%` を挟んで、パスワードも一緒に渡しています。"}
           },
           {
             "speaker": "player",
-            "text": "`Password for` と表示されました。ここに `Kanzaki2018` を入力すればいいんですね。"
+            "$local": {"text": "`Password for` と表示されました。ここに `Kanzaki2018` を入力すればいいんですね。"},
+            "$colab": {"text": "`kanzaki` の後ろの `Kanzaki2018` がパスワードですね。"}
           },
           {
             "speaker": "director",
-            "text": "ええ。パスワードは入力しても画面に文字や印が出ませんが、端末は受け取っています。そのまま正確に入力してEnterキーを押してください。"
+            "$local": {"text": "ええ。パスワードは入力しても画面に文字や印が出ませんが、端末は受け取っています。そのまま正確に入力してEnterキーを押してください。"},
+            "$colab": {"text": "ええ。コードセルではパスワードを尋ねる画面が出ないので、こうしてコマンドに含めます。`%` の前後に空白を入れず、大文字・小文字も正確に書いてください。"}
           },
           {
             "speaker": "player",
@@ -84,10 +87,18 @@
               {
                 "type": "hints",
                 "id": "hints",
-                "items": [
-                  "次のコマンドを実行し、`Sharename`・`Type`・`Comment` と並ぶ表を確認してください。探すのは `Type` が `Disk` の行です。\n\n```sh\nsmbclient -L //www.mikuriya-suisan.local -U kanzaki\n```",
-                  "`Sharename` 列の `staff` が調査に使う共有名です。末尾に出るSMB1の警告ではなく、その前の共有一覧を読みましょう。"
-                ]
+                "$local": {
+                  "items": [
+                    "次のコマンドを実行し、`Sharename`・`Type`・`Comment` と並ぶ表を確認してください。探すのは `Type` が `Disk` の行です。\n\n```sh\nsmbclient -L //www.mikuriya-suisan.local -U kanzaki\n```",
+                    "`Sharename` 列の `staff` が調査に使う共有名です。末尾に出るSMB1の警告ではなく、その前の共有一覧を読みましょう。"
+                  ]
+                },
+                "$colab": {
+                  "items": [
+                    "次のコマンドを実行し、`Sharename`・`Type`・`Comment` と並ぶ表を確認してください。探すのは `Type` が `Disk` の行です。\n\n```sh\nsmbclient -L //www.mikuriya-suisan.local -U 'kanzaki%Kanzaki2018'\n```",
+                    "`Sharename` 列の `staff` が調査に使う共有名です。末尾に出るSMB1の警告ではなく、その前の共有一覧を読みましょう。"
+                  ]
+                }
               },
               {
                 "type": "dialogue",
@@ -131,15 +142,18 @@
         "messages": [
           {
             "speaker": "director",
-            "text": "ターミナルで次のコマンドを実行し、先ほどと同じパスワードを入力してください。\n\n```sh\nsmbclient //www.mikuriya-suisan.local/staff -U kanzaki\n```\n\n`smb: \\>` と表示されれば接続成功です。"
+            "$local": {"text": "ターミナルで次のコマンドを実行し、先ほどと同じパスワードを入力してください。\n\n```sh\nsmbclient //www.mikuriya-suisan.local/staff -U kanzaki\n```\n\n`smb: \\>` と表示されれば接続成功です。"},
+            "$colab": {"text": "共有の中も、コードセルから調べます。次のコマンドを実行してください。\n\n```sh\nsmbclient //www.mikuriya-suisan.local/staff -U 'kanzaki%Kanzaki2018' -c 'ls'\n```\n\n`-c` は、共有に入って実行する操作の指定です。ファイルやディレクトリの一覧が表示されれば接続成功です。"}
           },
           {
             "speaker": "player",
-            "text": "入りました。普段のターミナルとは表示が違いますね。"
+            "$local": {"text": "入りました。普段のターミナルとは表示が違いますね。"},
+            "$colab": {"text": "一覧が出ました。中を見るたびに、このコマンドを実行し直すんですか？"}
           },
           {
             "speaker": "director",
-            "text": "今はサーバー上の共有を操作しています。`ls` で一覧表示、`cd ディレクトリ名` で移動、`get ファイル名` で調査端末の `/home/player` へ取得できます。終了は `quit` です。取得したファイルはMousepadなどで読めますよ。"
+            "$local": {"text": "今はサーバー上の共有を操作しています。`ls` で一覧表示、`cd ディレクトリ名` で移動、`get ファイル名` で調査端末の `/home/player` へ取得できます。終了は `quit` です。取得したファイルはMousepadなどで読めますよ。"},
+            "$colab": {"text": "ええ。`-c` の中身を変えて操作を切り替えます。`;` で区切ると、複数の操作を順に実行できます。ディレクトリの中を見るなら `cd ディレクトリ名; ls`、ファイルを取得するなら `cd ディレクトリ名; get ファイル名` です。\n\n```sh\nsmbclient //www.mikuriya-suisan.local/staff -U 'kanzaki%Kanzaki2018' -c 'cd ディレクトリ名; get ファイル名'\n```\n\n取得したファイルはColabの作業フォルダ `/content` に保存されます。中身は `cat` で読めますよ。\n\n```sh\ncat ファイル名\n```"}
                   }
                 ]
       },
@@ -314,7 +328,8 @@
           {
             "speaker": "director",
             "expression": "deflecting",
-            "text": "ええ、そうする方が賢明でしょう。まあ、こちらとしては助かりますが。社内メールを覗いて、片柳との連絡を探してみましょう。"
+            "$local": {"text": "ええ、そうする方が賢明でしょう。まあ、こちらとしては助かりますが。社内メールを覗いて、片柳との連絡を探してみましょう。"},
+            "$colab": {"text": "ええ、そうする方が賢明でしょう。まあ、こちらとしては助かりますが。社内メールの `http://mail.mikuriya-suisan.local/` を開いて、片柳との連絡を探してみましょう。"}
                   }
                 ]
               }

@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "checkpoints": [
+    { "after": "prologue_missing", "passphrase": "えまちゃん" },
+    { "after": "ch1_samba_credentials", "passphrase": "しょきぱすわーど" },
+    { "after": "ch2_next_access", "passphrase": "つかいまわし" },
+    { "after": "ch3_government_domain", "passphrase": "せいふのいんぼう" },
+    { "after": "ch4_conservation_target", "passphrase": "しまぐい" },
+    { "after": "ch4_handoff_schedule", "passphrase": "いそげ" }
+  ]
+}

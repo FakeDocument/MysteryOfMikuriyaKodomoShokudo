@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
+from .block_variants import resolve_environment
 
 DATA_DIR = Path(__file__).parent / "data"
 CHAPTERS_DIR = DATA_DIR / "chapters"
@@ -497,7 +498,7 @@ def load_content(
 ) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]]]:
     """章ファイル群と正解JSONを検証し、サーバー内部用データへ結合する。"""
 
-    chapters = _load_chapter_files(chapters_manifest_path)
+    chapters = resolve_environment(_load_chapter_files(chapters_manifest_path), "$local")
     answers_data = _load_json(answers_path, version=1)
     answers = answers_data.get("answers")
     if not isinstance(answers, dict):
