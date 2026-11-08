@@ -21,6 +21,7 @@ SOURCE_FILES = (
     "experiments/colab/colab_lab.py",
     "experiments/colab/colab_render.py",
     "experiments/colab/colab_web.py",
+    "experiments/colab/checkpoints.json",
     "docker/sushi/samba/smb.conf",
 )
 SOURCE_DIRS = (
@@ -61,10 +62,15 @@ def load_lesson(source: Path) -> dict[str, Any]:
     speakers = json.loads(
         (data / "dialogue-speakers.json").read_text(encoding="utf-8")
     )["speakers"]
+    # 合言葉の区切りはColab版だけで使うため、章JSONとは別に管理する。
+    checkpoints = json.loads(
+        (source / "experiments/colab/checkpoints.json").read_text(encoding="utf-8")
+    )["checkpoints"]
     return {
         "title": "御厨こども食堂の謎",
         "chapters": chapters,
         "speakers": speakers,
+        "checkpoints": checkpoints,
         "questions": [
             {**question, **answers[question["id"]]}
             for chapter in chapters

@@ -3,7 +3,6 @@
 import ast
 import base64
 import importlib.util
-import json
 import sys
 import tempfile
 import unittest
@@ -112,10 +111,24 @@ class ColabLessonTests(unittest.TestCase):
                             ],
                         }
                     ],
-                }
+                },
+                {"id": "middle", "blocks": [], "accepted": ["middle"]},
+                {"id": "later", "blocks": [], "accepted": ["later"]},
+            ],
+            "checkpoints": [
+                {"after": "middle", "passphrase": "はじめ"},
+                {"after": "later", "passphrase": "つづき"},
             ],
         }
         self.lesson = Lesson(self.data, self.root / "progress.json")
+
+    def solve(self, question_id: str) -> None:
+        values = (
+            {"port": "123", "service": "sample-service"}
+            if question_id == "sample"
+            else {"answer": question_id}
+        )
+        self.assertTrue(self.lesson.submit(question_id, values))
 
     def test_表記揺れを許容して正解を保存し再開できる(self) -> None:
         self.assertTrue(
@@ -137,9 +150,9 @@ class ColabLessonTests(unittest.TestCase):
         values = {"port": "123", "service": "sample-service"}
         self.lesson.submit("sample", values)
         self.assertTrue(self.lesson.follow_up("sample"))
-        self.lesson.submit("sample", values)
-        self.assertEqual(
-            len(json.loads((self.root / "progress.json").read_text())["answers"]), 1
+        self.assertTrue(self.lesson.submit("sample", values))
+        self.assertTrue(
+            Lesson(self.data, self.root / "progress.json").is_solved("sample")
         )
 
     def test_不足した入力欄や未知の設問を拒否する(self) -> None:
@@ -148,14 +161,74 @@ class ColabLessonTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.lesson.submit("unknown", {"port": "123", "service": "sample-service"})
 
-    def test_不正な進捗ファイルは既存の正解を上書きしない(self) -> None:
-        self.lesson.submit("sample", {"port": "123", "service": "sample-service"})
+    def test_区切りまでの設問をすべて正解するとその地点の合言葉を得られる(self) -> None:
+        self.assertIsNone(self.lesson.passphrase())
+        self.solve("middle")
+        # 区切りより前の設問が残っていれば、その地点には到達していない。
+        self.assertIsNone(self.lesson.passphrase())
+        self.solve("sample")
+        self.assertEqual(self.lesson.passphrase(), "はじめ")
+        self.solve("later")
+        self.assertEqual(self.lesson.passphrase(), "つづき")
+
+    def test_正解した設問が属する区間の合言葉だけをその設問で示す(self) -> None:
+        self.solve("sample")
+        self.assertIsNone(self.lesson.segment_passphrase("sample"))
+        self.solve("middle")
+        self.assertEqual(self.lesson.segment_passphrase("sample"), "はじめ")
+        self.assertEqual(self.lesson.segment_passphrase("middle"), "はじめ")
+        self.assertIsNone(self.lesson.segment_passphrase("later"))
+        self.solve("later")
+        self.assertEqual(self.lesson.segment_passphrase("sample"), "はじめ")
+        self.assertEqual(self.lesson.segment_passphrase("later"), "つづき")
+
+    def test_合言葉で区切りまでを正解済みにし再起動後も保持する(self) -> None:
+        self.assertTrue(self.lesson.resume(" はじめ　"))
+        self.assertTrue(self.lesson.is_solved("sample"))
+        self.assertTrue(self.lesson.is_solved("middle"))
+        self.assertFalse(self.lesson.is_solved("later"))
+        restored = Lesson(self.data, self.root / "progress.json")
+        self.assertTrue(restored.is_solved("middle"))
+        self.assertEqual(restored.passphrase(), "はじめ")
+
+    def test_合言葉で戻っても先に正解した設問は残る(self) -> None:
+        self.solve("later")
+        self.assertTrue(self.lesson.resume("はじめ"))
+        self.assertTrue(self.lesson.is_solved("later"))
+        self.assertEqual(self.lesson.passphrase(), "つづき")
+
+    def test_誤った合言葉や空の入力は進捗を変えない(self) -> None:
+        self.solve("sample")
         before = (self.root / "progress.json").read_bytes()
-        with self.assertRaises(ValueError):
-            self.lesson.restore(
-                {"answers": {"sample": {"port": "124", "service": "sample-service"}}}
-            )
+        self.assertFalse(self.lesson.resume("ちがう"))
+        self.assertFalse(self.lesson.resume("  "))
         self.assertEqual((self.root / "progress.json").read_bytes(), before)
+        self.assertFalse(self.lesson.is_solved("middle"))
+
+    def test_形式が壊れた進捗ファイルは読み込み時に拒否する(self) -> None:
+        path = self.root / "progress.json"
+        path.write_text('{"solved": "sample"}', encoding="utf-8")
+        with self.assertRaises(ValueError):
+            Lesson(self.data, path)
+
+    def test_未知の設問を指す区切りは読み込み時に拒否する(self) -> None:
+        broken = {
+            **self.data,
+            "checkpoints": [{"after": "unknown", "passphrase": "なぞ"}],
+        }
+        with self.assertRaises(ValueError):
+            Lesson(broken, self.root / "other.json")
+
+    def test_重複した合言葉は読み込み時に拒否する(self) -> None:
+        broken = {
+            **self.data,
+            "checkpoints": [
+                {"after": "middle", "passphrase": "おなじ"},
+                {"after": "later", "passphrase": "おなじ"},
+            ],
+        }
+        with self.assertRaises(ValueError):
+            Lesson(broken, self.root / "other.json")
 
 
 class ColabNotebookTests(unittest.TestCase):

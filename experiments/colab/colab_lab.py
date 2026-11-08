@@ -53,9 +53,27 @@ class Lesson:
         self.data = data
         self.questions = {question["id"]: question for question in data["questions"]}
         self.progress_path = progress_path
-        self.answers: dict[str, dict[str, str]] = {}
+        self.order = list(self.questions)
+        self.checkpoints = validated_checkpoints(
+            data.get("checkpoints", []), self.order
+        )
+        self.solved: frozenset[str] = frozenset()
         if progress_path.exists():
-            self.restore(json.loads(progress_path.read_text(encoding="utf-8")))
+            self.solved = self._load_solved(
+                json.loads(progress_path.read_text(encoding="utf-8"))
+            )
+
+    def _load_solved(self, progress: Any) -> frozenset[str]:
+        solved = progress.get("solved") if isinstance(progress, dict) else None
+        if not isinstance(solved, list) or not set(solved) <= set(self.order):
+            raise ValueError("進捗ファイルの形式が不正です。")
+        return frozenset(solved)
+
+    def _save(self, solved: frozenset[str]) -> None:
+        # 設問の並び順で保存し、同じ進捗なら同じ内容になるようにする。
+        ordered = [question for question in self.order if question in solved]
+        write_json(self.progress_path, {"version": 2, "solved": ordered})
+        self.solved = solved
 
     def _correct(self, question_id: str, values: dict[str, str]) -> bool:
         if question_id not in self.questions:
@@ -87,13 +105,53 @@ class Lesson:
     def submit(self, question_id: str, values: dict[str, str]) -> bool:
         if not self._correct(question_id, values):
             return False
-        updated = {**self.answers, question_id: dict(values)}
-        write_json(self.progress_path, {"version": 1, "answers": updated})
-        self.answers = updated
+        if question_id not in self.solved:
+            self._save(self.solved | {question_id})
         return True
 
     def is_solved(self, question_id: str) -> bool:
-        return question_id in self.answers
+        return question_id in self.solved
+
+    def _reached(self, checkpoint: dict[str, str]) -> bool:
+        end = self.order.index(checkpoint["after"])
+        return all(self.is_solved(question) for question in self.order[: end + 1])
+
+    def passphrase(self) -> str | None:
+        """到達済みの区切りのうち、最も先の地点の合言葉を返す。"""
+        reached = [item for item in self.checkpoints if self._reached(item)]
+        return reached[-1]["passphrase"] if reached else None
+
+    def segment_passphrase(self, question_id: str) -> str | None:
+        """設問が属する区間の終わりに到達していれば、その地点の合言葉を返す。"""
+        index = self.order.index(question_id)
+        segment = next(
+            (
+                item
+                for item in self.checkpoints
+                if self.order.index(item["after"]) >= index
+            ),
+            None,
+        )
+        if segment is None or not self._reached(segment):
+            return None
+        return segment["passphrase"]
+
+    def resume(self, passphrase: str) -> bool:
+        """合言葉の地点までの設問を正解済みにする。先の正解は消さない。"""
+        normalized = normalize_passphrase(passphrase)
+        checkpoint = next(
+            (
+                item
+                for item in self.checkpoints
+                if normalize_passphrase(item["passphrase"]) == normalized
+            ),
+            None,
+        )
+        if not normalized or checkpoint is None:
+            return False
+        end = self.order.index(checkpoint["after"])
+        self._save(self.solved | frozenset(self.order[: end + 1]))
+        return True
 
     def follow_up(self, question_id: str) -> str:
         if not self.is_solved(question_id):
@@ -206,18 +264,36 @@ class Lesson:
             return result
         raise ValueError(f"未対応のブロック種別です: {kind}")
 
-    def restore(self, progress: dict[str, Any]) -> None:
-        if not isinstance(progress, dict) or not isinstance(
-            progress.get("answers"), dict
-        ):
-            raise TypeError("進捗ファイルの形式が不正です。")
-        answers = progress["answers"]
-        if not all(
-            self._correct(question, values) for question, values in answers.items()
-        ):
-            raise ValueError("進捗ファイルに不正な回答があります。")
-        write_json(self.progress_path, {"version": 1, "answers": answers})
-        self.answers = {question: dict(values) for question, values in answers.items()}
+
+def passphrase_html(passphrase: str | None) -> str:
+    if passphrase is None:
+        return ""
+    return (
+        '<p style="border:1px solid #214d40;padding:8px">合言葉: <strong>'
+        + html.escape(passphrase)
+        + "</strong><br>ランタイムが削除されても、冒頭の「合言葉で再開する」セルに"
+        "入力するとここから再開できます。次の調査で使う情報はノートブックに控えておいてください。</p>"
+    )
+
+
+def normalize_passphrase(value: str) -> str:
+    """全角・半角の違いと空白を無視して合言葉を比べる。"""
+    return re.sub(r"\s+", "", unicodedata.normalize("NFKC", value))
+
+
+def validated_checkpoints(
+    checkpoints: list[dict[str, str]], order: list[str]
+) -> list[dict[str, str]]:
+    """区切りを設問の並び順に整え、参照先と合言葉の重複を確かめる。"""
+    for item in checkpoints:
+        if item.get("after") not in order:
+            raise ValueError(f"区切りの設問が見つかりません: {item.get('after')}")
+        if not normalize_passphrase(item.get("passphrase", "")):
+            raise ValueError("区切りの合言葉が空です。")
+    keys = [normalize_passphrase(item["passphrase"]) for item in checkpoints]
+    if len(keys) != len(set(keys)):
+        raise ValueError("区切りの合言葉が重複しています。")
+    return sorted(checkpoints, key=lambda item: order.index(item["after"]))
 
 
 def answer_fields(question: dict[str, Any]) -> list[dict[str, Any]]:
@@ -529,6 +605,7 @@ class Lab:
             markup += (
                 '<p style="color:#214d40;font-weight:bold">正解です。</p>'
                 + self.lesson.follow_up(question_id)
+                + passphrase_html(self.lesson.segment_passphrase(question_id))
             )
         display(HTML(markup))
         if correct:
@@ -543,6 +620,22 @@ class Lab:
                 )
             )
         return False
+
+    def resume(self, passphrase: str) -> bool:
+        """合言葉で再開する。空欄なら、いま使える合言葉を示す。"""
+        if not passphrase.strip():
+            current = self.lesson.passphrase()
+            print(
+                f"現在の合言葉: {current}"
+                if current
+                else "まだ合言葉はありません。区切りまで進むと表示されます。"
+            )
+            return False
+        if not self.lesson.resume(passphrase):
+            print("合言葉が違います。表示された合言葉をひらがなで入力してください。")
+            return False
+        print("合言葉を受け付けました。続きのセルを実行してください。")
+        return True
 
     def show_block(self, chapter_id: str, block_id: str) -> None:
         from IPython.display import HTML, display

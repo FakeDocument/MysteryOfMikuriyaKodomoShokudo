@@ -9,6 +9,7 @@ on:
       - 'experiments/colab/colab_lab.py'
       - 'experiments/colab/colab_render.py'
       - 'experiments/colab/colab_web.py'
+      - 'experiments/colab/checkpoints.json'
       - 'docker/notebook/app/block_variants.py'
       - 'docker/notebook/app/data/**'
       - 'docker/notebook/app/static/images/**'

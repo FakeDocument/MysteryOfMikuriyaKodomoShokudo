@@ -23,7 +23,9 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = ROOT / "experiments/colab/MysteryOfMikuriyaKodomoShokudo-Colab.ipynb"
 REPOSITORY = "FakeDocument/MysteryOfMikuriyaKodomoShokudo"
 # 準備セルとフォームが使う名前は、回答欄の変数名にしない。
-RESERVED_NAMES = frozenset({"lab", "files", "json", "sys", "importlib", "ROOT", "_"})
+RESERVED_NAMES = frozenset(
+    {"lab", "files", "json", "sys", "importlib", "ROOT", "_", "合言葉"}
+)
 
 
 def load_lesson() -> dict[str, Any]:
@@ -273,10 +275,26 @@ def build_notebook(
 標的環境は寿司屋のWeb・Sambaを起動する試作です。後続章のWebメールや政府側サービスのColab対応は準備中です。
 
 準備セルで、{origin}、必要なツールを導入します。
-進捗はランタイム内へ保存します。終了後も残したい場合は、末尾のセルから進捗ファイルをダウンロードしてください。
 """,
         ),
         cell("code", "setup", setup, form=True),
+        cell(
+            "markdown",
+            "resume-guide",
+            """## 調査の中断・再開
+
+章の区切りまで進むと合言葉が表示されます。
+同じランタイムなら、準備セルを再実行しても正解済みの設問を引き継げます。
+ランタイムが削除されたときは、準備セルを実行してから、次のセルに合言葉を入力して実行します。
+合言葉を忘れたときは、空欄のまま実行すると、いまの進捗の合言葉を確認できます。
+""",
+        ),
+        cell(
+            "code",
+            "resume-progress",
+            '# @title 合言葉で再開する\n# @markdown 区切りで表示された合言葉をひらがなで入力します。\n合言葉 = "" # @param {type:"string"}\n_ = lab.resume(合言葉)\n',
+            form=True,
+        ),
     ]
     for chapter in lesson["chapters"]:
         chapter_id = chapter["id"]
@@ -285,38 +303,6 @@ def build_notebook(
         cells.append(cell("markdown", chapter_id + "-section", f"## {title}\n"))
         for block in chapter["blocks"]:
             cells.extend(block_cells(block, chapter_id))
-    cells.extend(
-        [
-            cell(
-                "markdown",
-                "finish",
-                """## 調査の中断・再開
-
-同じランタイムなら、準備セルを再実行しても保存済みの正解を引き継げます。
-Colabのランタイムが削除されると保存ファイルも消えるため、残したい進捗をダウンロードしてください。
-再開時は準備セルを実行し、次の「進捗を読み込む」からファイルを選びます。
-""",
-            ),
-            cell(
-                "code",
-                "download-progress",
-                "# @title 進捗をダウンロードする\nfrom google.colab import files\nif lab.lesson.progress_path.exists():\n    files.download(str(lab.lesson.progress_path))\nelse:\n    print('まだ保存された回答がありません。')\n",
-                form=True,
-            ),
-            cell(
-                "code",
-                "restore-progress",
-                "# @title 進捗を読み込む（再開時のみ）\nimport json\nfrom google.colab import files\nuploaded = files.upload()\nif len(uploaded) == 1:\n    lab.lesson.restore(json.loads(next(iter(uploaded.values()))))\n    print('進捗を復元しました。正解済み:', len(lab.lesson.answers))\nelse:\n    print('進捗ファイルを1つ選んでください。')\n",
-                form=True,
-            ),
-            cell(
-                "code",
-                "stop",
-                "# @title 調査環境を停止する\nlab.stop()\nprint('調査環境を停止しました。')\n",
-                form=True,
-            ),
-        ]
-    )
     return {
         "nbformat": 4,
         "nbformat_minor": 5,

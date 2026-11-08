@@ -601,6 +601,78 @@ class ColabConversionTests(unittest.TestCase):
         self.lab.lesson.submit("sample", {"answer": "result"})
         self.assertTrue(self.lab.lesson.chapter_open("next"))
 
+    def test_各区切りの合言葉で再開すると次の設問へ進める(self) -> None:
+        lesson = builder.load_lesson()
+        order = [question["id"] for question in lesson["questions"]]
+        builder.colab_assets.prepare_from_source(ROOT, self.root)
+        self.assertTrue(lesson["checkpoints"])
+        passphrases = [item["passphrase"] for item in lesson["checkpoints"]]
+        self.assertEqual(len(passphrases), len(set(passphrases)))
+        for checkpoint in lesson["checkpoints"]:
+            with self.subTest(after=checkpoint["after"]):
+                (self.root / "progress.json").unlink(missing_ok=True)
+                self.lab = runtime.Lab(self.root)
+                self.assertTrue(self.lab.lesson.resume(checkpoint["passphrase"]))
+                index = order.index(checkpoint["after"])
+                self.assertTrue(
+                    all(self.lab.lesson.is_solved(item) for item in order[: index + 1])
+                )
+                self.assertEqual(
+                    self.lab.lesson.passphrase(), checkpoint["passphrase"]
+                )
+                if index + 1 < len(order):
+                    self.assertTrue(self.lab.lesson.question_open(order[index + 1]))
+
+    def test_生成した再開セルに合言葉を入力して実行すると進捗が戻る(self) -> None:
+        self.data["checkpoints"] = [{"after": "sample", "passphrase": "あいことば"}]
+        self.generate(
+            {"type": "questions", "id": "questions", "items": [self.question]}
+        )
+        lesson = self.lab.lesson
+        notebook = builder.build_notebook("a" * 40)
+        resume = next(
+            cell for cell in notebook["cells"] if cell["id"] == "resume-progress"
+        )
+        source = "".join(resume["source"])
+        # 空欄で実行しても進捗は変わらない。
+        self.execute([resume])
+        self.assertFalse(lesson.is_solved("sample"))
+        filled = source.replace('= ""', '= "あいことば"', 1)
+        self.execute([{**resume, "source": [filled]}])
+        self.assertTrue(lesson.is_solved("sample"))
+
+    def test_再開セルは準備セルの直後で最初の章より前に置く(self) -> None:
+        cells = builder.build_notebook("a" * 40)["cells"]
+        ids = [cell["id"] for cell in cells]
+        first_chapter = builder.load_lesson()["chapters"][0]["id"]
+        chapter_start = ids.index(first_chapter + "-section")
+        self.assertLess(ids.index("setup"), ids.index("resume-progress"))
+        self.assertLess(ids.index("resume-progress"), chapter_start)
+
+    def test_準備セル以外に調査環境を停止するセルがない(self) -> None:
+        cells = builder.build_notebook("a" * 40)["cells"]
+        stops = [
+            cell["id"]
+            for cell in cells
+            if cell["cell_type"] == "code" and "lab.stop()" in "".join(cell["source"])
+            and cell["id"] != "setup"
+        ]
+        self.assertEqual(stops, [])
+
+    def test_最後のセルは最後の章に属する(self) -> None:
+        cells = builder.build_notebook("a" * 40)["cells"]
+        last_chapter = builder.load_lesson()["chapters"][-1]["id"]
+        self.assertTrue(cells[-1]["id"].startswith(last_chapter + "-"))
+
+    def test_区間の最後の設問に正解すると合言葉を表示する(self) -> None:
+        self.data["checkpoints"] = [{"after": "sample", "passphrase": "あいことば"}]
+        cells = self.generate(
+            {"type": "questions", "id": "questions", "items": [self.question]}
+        )
+        source = "".join(cells[0]["source"]).replace('= ""', '= "result"', 1)
+        output, _ = self.execute([{**cells[0], "source": [source]}])
+        self.assertIn("あいことば", "".join(Markup(output).text))
+
     def test_完全一致と必須語判定を既存JSONの方式どおりに扱う(self) -> None:
         self.generate({"type": "dialogue", "id": "empty", "messages": []})
         question = self.lab.lesson.questions["sample"]
