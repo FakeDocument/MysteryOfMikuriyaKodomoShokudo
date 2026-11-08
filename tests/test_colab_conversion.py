@@ -456,7 +456,7 @@ class ColabConversionTests(unittest.TestCase):
     def test_生成ノートブックのセルを構文検証でき出力が空でIDが重複しない(self) -> None:
         lesson = builder.load_lesson()
         self.assertIn("chapters", lesson)
-        notebook = builder.build_notebook()
+        notebook = builder.build_notebook("a" * 40)
         self.assertEqual(
             len({cell["id"] for cell in notebook["cells"]}), len(notebook["cells"])
         )

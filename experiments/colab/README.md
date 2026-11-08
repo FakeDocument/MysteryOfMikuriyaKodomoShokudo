@@ -32,14 +32,21 @@
 
 Colabのランタイムや導入パッケージは提供側の更新で変わる。この試作では、APTパッケージのバージョンは固定していない。利用制限は[Colab公式FAQ](https://research.google.com/colaboratory/faq.html)を参照する。
 
-## 開発時の生成・検証
+## 教材の更新・検証
 
-教材・画像・標的データ・表示用Pythonを更新したら、まずそれらをコミットする。次のコマンドは現在のHEADのSHAを取得先として固定するため、対象ソースに未コミットの変更があると生成を止める。生成した `.ipynb` は続くコミットで保存し、取得元のコミットとともにGitHubへpushする。配布用ファイルは回答欄と実行出力を空にした状態にする。
+教材・画像・標的データ・表示用Pythonと生成処理は、通常どおり変更をmainへpushまたはマージする。`.github/workflows/colab-notebook.yml` が関連ファイルの変更を検知してテストと生成を実行し、更新した `.ipynb` だけをbotがmainへコミットする。回答欄と実行出力は空の状態で生成する。Actions画面からmainを対象に手動実行することもできる。
+
+生成時にチェックアウトしたmainのコミットSHAを取得先として固定する。これにより、配布済みノートブックのセルと実行時に取得する教材の版を揃える。生成物の更新はトリガーの対象パスに含めず、botのpushには標準の `GITHUB_TOKEN` を使用する。mainへの書き込みが許可されている必要がある。
+
+生成中にmainが更新されてpushに失敗した場合は、最新のmainからテスト・生成をやり直し、最大3回試行する。
+
+開発中のテストは、未コミット変更がある状態でも実行できる。
 
 ```sh
-uv run --no-project python scripts/build_colab.py
 uv run --no-project python -m unittest discover -s tests -v
 ```
+
+手元で生成を確認する場合は `uv run --no-project python scripts/build_colab.py --output /tmp/mikuriya-colab.ipynb` を使う。取得先を現在のHEADに固定するため、このコマンドは教材・実行用ソースの未コミット変更を検出すると停止する。
 
 実サービスの統合テストは、ノートブックの準備が完了した専用Linux環境で実行する。`MIKURIYA_COLAB_INTEGRATION_ROOT` には展開済みの教材ディレクトリを指定する。通常のテスト実行ではこの統合テストをスキップする。
 

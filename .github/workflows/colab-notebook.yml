@@ -1,0 +1,57 @@
+name: Generate Colab notebook
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/colab-notebook.yml'
+      - 'scripts/build_colab.py'
+      - 'scripts/colab_assets.py'
+      - 'experiments/colab/colab_lab.py'
+      - 'experiments/colab/colab_render.py'
+      - 'docker/notebook/app/block_variants.py'
+      - 'docker/notebook/app/data/**'
+      - 'docker/notebook/app/static/images/**'
+      - 'docker/sushi/site/**'
+      - 'docker/sushi/samba/smb.conf'
+      - 'docker/sushi/samba/share/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: colab-notebook-main
+  cancel-in-progress: false
+jobs:
+  generate:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate, generate and commit notebook
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3; do
+            # 生成中にmainが更新された場合は、最新のソースで検証・生成し直す。
+            git fetch origin main
+            git reset --hard origin/main
+            python -m unittest discover -s tests -v
+            python scripts/build_colab.py
+            git add -- experiments/colab/MysteryOfMikuriyaKodomoShokudo-Colab.ipynb
+            if git diff --cached --quiet; then
+              exit 0
+            fi
+            git commit -m 'chore: Colabノートブックを自動更新'
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "mainへの更新を再試行します: $attempt/3"
+          done
+          echo '::error::生成したノートブックをmainへ反映できませんでした。'
+          exit 1

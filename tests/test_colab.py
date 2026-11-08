@@ -4,7 +4,6 @@ import ast
 import base64
 import importlib.util
 import json
-import subprocess
 import sys
 import tempfile
 import unittest
@@ -13,6 +12,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "experiments/colab"))
+sys.path.insert(0, str(ROOT / "scripts"))
+
+from build_colab import build_notebook
+
 spec = importlib.util.spec_from_file_location(
     "colab_lab", ROOT / "experiments/colab/colab_lab.py"
 )
@@ -156,19 +159,8 @@ class ColabLessonTests(unittest.TestCase):
 
 class ColabNotebookTests(unittest.TestCase):
     def test_固定コミットから教材を取得するノートブックを生成できる(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            output = Path(temp) / "experiment.ipynb"
-            subprocess.run(
-                [
-                    sys.executable,
-                    str(ROOT / "scripts/build_colab.py"),
-                    "--output",
-                    str(output),
-                ],
-                check=True,
-                capture_output=True,
-            )
-            notebook = json.loads(output.read_text())
+        source_commit = "a" * 40
+        notebook = build_notebook(source_commit)
         self.assertEqual(notebook["nbformat"], 4)
         ids = [cell["id"] for cell in notebook["cells"]]
         self.assertEqual(len(ids), len(set(ids)))
@@ -192,7 +184,7 @@ class ColabNotebookTests(unittest.TestCase):
                 for target in node.targets
             )
         )
-        self.assertRegex(commit, r"\A[0-9a-f]{40}\Z")
+        self.assertEqual(commit, source_commit)
 
 
 if __name__ == "__main__":

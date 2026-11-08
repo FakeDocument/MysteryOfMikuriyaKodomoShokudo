@@ -25,6 +25,8 @@ chapters/
 - `questions`: 設問カードのまとまり
 - `report`: 正答後に表示する、項目と結論を持つ調査報告書
 
+教材を変更してmainへpushまたはマージすると、GitHub Actionsが `scripts/build_colab.py` でipynbを再生成し、生成物をmainへ自動コミットします。
+
 ## Markdown
 
 章本文では、次のMarkdownを使用できます。HTMLは文字として表示され、タグとしては実行されません。プレイヤーが入力する証拠メモはプレーンテキストとして保存します。

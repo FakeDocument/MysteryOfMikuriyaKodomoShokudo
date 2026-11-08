@@ -148,9 +148,8 @@ def block_cells(block: dict[str, Any], chapter_id: str) -> list[dict[str, Any]]:
     return cells
 
 
-def build_notebook() -> dict[str, Any]:
+def build_notebook(commit: str) -> dict[str, Any]:
     lesson = load_lesson()
-    commit = source_commit()
     setup = "# @title 1. 調査環境を準備する\n"
     setup += Path(colab_assets.__file__).read_text(encoding="utf-8")
     setup += f"\nSOURCE_COMMIT = {commit!r}\nREPOSITORY = {REPOSITORY!r}\n"
@@ -254,7 +253,7 @@ def main() -> None:
     arguments = parser.parse_args()
     arguments.output.parent.mkdir(parents=True, exist_ok=True)
     arguments.output.write_text(
-        json.dumps(build_notebook(), ensure_ascii=False, indent=1) + "\n",
+        json.dumps(build_notebook(source_commit()), ensure_ascii=False, indent=1) + "\n",
         encoding="utf-8",
     )
     print(f"ノートブックを生成しました: {arguments.output}")
