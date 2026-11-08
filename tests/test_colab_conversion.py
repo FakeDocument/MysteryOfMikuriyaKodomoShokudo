@@ -15,7 +15,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "experiments/colab"))
+sys.path.insert(0, str(ROOT / "colab"))
 sys.path.insert(0, str(ROOT / "scripts"))
 
 
@@ -27,7 +27,7 @@ def load_module(name: str, path: Path):
 
 
 builder = load_module("colab_builder", ROOT / "scripts/build_colab.py")
-runtime = load_module("colab_runtime", ROOT / "experiments/colab/colab_lab.py")
+runtime = load_module("colab_runtime", ROOT / "colab/colab_lab.py")
 
 
 class Markup(HTMLParser):

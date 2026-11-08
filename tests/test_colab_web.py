@@ -13,7 +13,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "experiments/colab"))
+sys.path.insert(0, str(ROOT / "colab"))
 
 
 import colab_render as render  # noqa: E402

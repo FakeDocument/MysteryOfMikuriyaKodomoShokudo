@@ -18,10 +18,10 @@ from urllib.request import urlopen
 
 SOURCE_FILES = (
     "docker/notebook/app/block_variants.py",
-    "experiments/colab/colab_lab.py",
-    "experiments/colab/colab_render.py",
-    "experiments/colab/colab_web.py",
-    "experiments/colab/checkpoints.json",
+    "colab/colab_lab.py",
+    "colab/colab_render.py",
+    "colab/colab_web.py",
+    "colab/checkpoints.json",
     "docker/sushi/samba/smb.conf",
 )
 SOURCE_DIRS = (
@@ -64,7 +64,7 @@ def load_lesson(source: Path) -> dict[str, Any]:
     )["speakers"]
     # 合言葉の区切りはColab版だけで使うため、章JSONとは別に管理する。
     checkpoints = json.loads(
-        (source / "experiments/colab/checkpoints.json").read_text(encoding="utf-8")
+        (source / "colab/checkpoints.json").read_text(encoding="utf-8")
     )["checkpoints"]
     return {
         "title": "御厨こども食堂の謎",
@@ -99,7 +99,7 @@ def prepare_from_source(source: Path, root: Path) -> None:
             json.dumps({"username": username, "password": password}), encoding="utf-8"
         )
         for name in ("colab_lab.py", "colab_render.py", "colab_web.py"):
-            shutil.copyfile(source / "experiments/colab" / name, staging / name)
+            shutil.copyfile(source / "colab" / name, staging / name)
         shutil.copyfile(source / "docker/sushi/samba/smb.conf", staging / "smb.conf.in")
         for directory, destination in (
             ("docker/sushi/site", "site"),

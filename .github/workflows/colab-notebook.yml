@@ -6,10 +6,10 @@ on:
       - '.github/workflows/colab-notebook.yml'
       - 'scripts/build_colab.py'
       - 'scripts/colab_assets.py'
-      - 'experiments/colab/colab_lab.py'
-      - 'experiments/colab/colab_render.py'
-      - 'experiments/colab/colab_web.py'
-      - 'experiments/colab/checkpoints.json'
+      - 'colab/colab_lab.py'
+      - 'colab/colab_render.py'
+      - 'colab/colab_web.py'
+      - 'colab/checkpoints.json'
       - 'docker/notebook/app/block_variants.py'
       - 'docker/notebook/app/data/**'
       - 'docker/notebook/app/static/images/**'
@@ -45,7 +45,7 @@ jobs:
             git reset --hard origin/main
             python -m unittest discover -s tests -v
             python scripts/build_colab.py
-            git add -- experiments/colab/MysteryOfMikuriyaKodomoShokudo-Colab.ipynb
+            git add -- colab/MysteryOfMikuriyaKodomoShokudo-Colab.ipynb
             if git diff --cached --quiet; then
               exit 0
             fi

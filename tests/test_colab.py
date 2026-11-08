@@ -10,14 +10,14 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "experiments/colab"))
+sys.path.insert(0, str(ROOT / "colab"))
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import colab_assets
 from build_colab import build_notebook
 
 spec = importlib.util.spec_from_file_location(
-    "colab_lab", ROOT / "experiments/colab/colab_lab.py"
+    "colab_lab", ROOT / "colab/colab_lab.py"
 )
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)

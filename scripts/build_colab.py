@@ -20,7 +20,7 @@ from typing import Any
 import colab_assets
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_OUTPUT = ROOT / "experiments/colab/MysteryOfMikuriyaKodomoShokudo-Colab.ipynb"
+DEFAULT_OUTPUT = ROOT / "colab/MysteryOfMikuriyaKodomoShokudo-Colab.ipynb"
 REPOSITORY = "FakeDocument/MysteryOfMikuriyaKodomoShokudo"
 # 準備セルとフォームが使う名前は、回答欄の変数名にしない。
 RESERVED_NAMES = frozenset(
