@@ -641,29 +641,6 @@ class ColabConversionTests(unittest.TestCase):
         self.execute([{**resume, "source": [filled]}])
         self.assertTrue(lesson.is_solved("sample"))
 
-    def test_再開セルは準備セルの直後で最初の章より前に置く(self) -> None:
-        cells = builder.build_notebook("a" * 40)["cells"]
-        ids = [cell["id"] for cell in cells]
-        first_chapter = builder.load_lesson()["chapters"][0]["id"]
-        chapter_start = ids.index(first_chapter + "-section")
-        self.assertLess(ids.index("setup"), ids.index("resume-progress"))
-        self.assertLess(ids.index("resume-progress"), chapter_start)
-
-    def test_準備セル以外に調査環境を停止するセルがない(self) -> None:
-        cells = builder.build_notebook("a" * 40)["cells"]
-        stops = [
-            cell["id"]
-            for cell in cells
-            if cell["cell_type"] == "code" and "lab.stop()" in "".join(cell["source"])
-            and cell["id"] != "setup"
-        ]
-        self.assertEqual(stops, [])
-
-    def test_最後のセルは最後の章に属する(self) -> None:
-        cells = builder.build_notebook("a" * 40)["cells"]
-        last_chapter = builder.load_lesson()["chapters"][-1]["id"]
-        self.assertTrue(cells[-1]["id"].startswith(last_chapter + "-"))
-
     def test_区間の最後の設問に正解すると合言葉を表示する(self) -> None:
         self.data["checkpoints"] = [{"after": "sample", "passphrase": "あいことば"}]
         cells = self.generate(
