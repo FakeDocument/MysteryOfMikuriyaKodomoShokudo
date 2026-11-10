@@ -153,6 +153,8 @@ def question_cell(
     lines = [f"# @title {title}（{label}）"]
     # フォームでは @markdown 行が入力欄の上に出るため、何を答えるかを先に示す。
     lines.extend(f"# @markdown {line}" for line in question["prompt"].splitlines())
+    # 連続する @markdown 行は1つの段落になるため、空行で回答欄の説明と分ける。
+    lines.append("# @markdown")
     values = []
     used: set[str] = set()
     for index, field in enumerate(fields):

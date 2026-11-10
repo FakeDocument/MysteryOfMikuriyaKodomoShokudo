@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import base64
-import io
 import importlib.util
+import io
 import json
 import re
 import shutil
@@ -21,14 +21,44 @@ SOURCE_FILES = (
     "colab/colab_lab.py",
     "colab/colab_render.py",
     "colab/colab_web.py",
+    "colab/colab_targets.py",
     "colab/checkpoints.json",
     "docker/sushi/samba/smb.conf",
+    "docker/sushi/nginx.conf",
+    "docker/portal/nginx.conf",
+    "docker/portal/samba/smb.conf",
 )
 SOURCE_DIRS = (
     "docker/notebook/app/data",
     "docker/notebook/app/static/images",
     "docker/sushi/site",
     "docker/sushi/samba/share",
+    "docker/sushi/webmail",
+    "docker/portal/app",
+    "docker/portal/samba/handover",
+    "docker/portal/samba/share",
+)
+# 取得元のファイルとランタイム上の配置先。Docker版の設定はColab用に変換して使う。
+STAGED_FILES = (
+    ("docker/sushi/samba/smb.conf", "smb.conf.in"),
+    ("docker/portal/samba/smb.conf", "smb-portal.conf.in"),
+    ("docker/sushi/nginx.conf", "nginx-sushi.conf.in"),
+    ("docker/portal/nginx.conf", "nginx-portal.conf.in"),
+)
+STAGED_DIRS = (
+    ("docker/sushi/site", "site"),
+    ("docker/sushi/samba/share", "share"),
+    ("docker/sushi/webmail", "webmail"),
+    ("docker/portal/app", "portal/app"),
+    ("docker/portal/samba/handover", "portal-handover"),
+    ("docker/portal/samba/share", "portal-handoff"),
+    ("docker/notebook/app/static/images", "images"),
+)
+RUNTIME_MODULES = (
+    "colab_lab.py",
+    "colab_render.py",
+    "colab_web.py",
+    "colab_targets.py",
 )
 
 
@@ -37,7 +67,7 @@ def source_files(source: Path) -> list[Path]:
         file.relative_to(source)
         for directory in SOURCE_DIRS
         for file in sorted((source / directory).rglob("*"))
-        if file.is_file()
+        if file.is_file() and "__pycache__" not in file.parts
     ]
 
 
@@ -98,15 +128,16 @@ def prepare_from_source(source: Path, root: Path) -> None:
         (staging / "account.json").write_text(
             json.dumps({"username": username, "password": password}), encoding="utf-8"
         )
-        for name in ("colab_lab.py", "colab_render.py", "colab_web.py"):
+        for name in RUNTIME_MODULES:
             shutil.copyfile(source / "colab" / name, staging / name)
-        shutil.copyfile(source / "docker/sushi/samba/smb.conf", staging / "smb.conf.in")
-        for directory, destination in (
-            ("docker/sushi/site", "site"),
-            ("docker/sushi/samba/share", "share"),
-            ("docker/notebook/app/static/images", "images"),
-        ):
-            shutil.copytree(source / directory, staging / destination)
+        for file, destination in STAGED_FILES:
+            shutil.copyfile(source / file, staging / destination)
+        for directory, destination in STAGED_DIRS:
+            shutil.copytree(
+                source / directory,
+                staging / destination,
+                ignore=shutil.ignore_patterns("__pycache__"),
+            )
         root.mkdir(parents=True, exist_ok=True)
         for asset in staging.iterdir():
             destination = root / asset.name

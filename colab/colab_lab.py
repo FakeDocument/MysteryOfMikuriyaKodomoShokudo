@@ -16,7 +16,23 @@ import unicodedata
 from pathlib import Path
 from typing import Any
 
-from colab_render import dialogue_html, inline_html, markdown_html, set_site_links
+from colab_render import (
+    dialogue_html,
+    inline_html,
+    markdown_html,
+    set_site_links,
+)
+from colab_targets import (
+    HOSTS,
+    OPEN_PORTS,
+    PORTAL_ACCOUNT,
+    SAMBA_SERVERS,
+    nginx_config,
+    ready_endpoints,
+    samba_config,
+    samba_directories,
+    services,
+)
 from colab_web import (
     SITES,
     Running,
@@ -26,14 +42,20 @@ from colab_web import (
     start_relay,
 )
 
-TARGET_IP = "172.30.0.10"
+TARGET_IP = HOSTS["www.mikuriya-suisan.local"]
 TARGET_HOST = "www.mikuriya-suisan.local"
+# 標的サービスの起動を待つ上限（秒）。FastAPIの読み込みに数秒かかる。
+STARTUP_TIMEOUT = 60
+POLL_INTERVAL = 0.1
+# Webアプリが使うPythonパッケージ。Colabには通常導入済み。
+PYTHON_PACKAGES = ("fastapi", "uvicorn", "jinja2")
 TOOLS = (
     "nginx",
     "smbd",
     "smbpasswd",
     "smbclient",
     "nmap",
+    "dirb",
     "curl",
     "ip",
     "unshare",
@@ -365,6 +387,7 @@ class Lab:
     def install_tools(self) -> None:
         if sys.platform != "linux" or os.geteuid() != 0:
             raise RuntimeError("この試作はColabのLinuxランタイムで実行してください。")
+        self._install_python_packages()
         if all(
             shutil.which(tool, path="/usr/sbin:/usr/bin:/sbin:/bin") for tool in TOOLS
         ):
@@ -389,6 +412,7 @@ class Lab:
                         "samba",
                         "smbclient",
                         "nmap",
+                        "dirb",
                         "curl",
                         "iproute2",
                         "util-linux",
@@ -409,48 +433,55 @@ class Lab:
             if created:
                 policy.unlink()
 
+    def _install_python_packages(self) -> None:
+        import importlib.util
+
+        missing = [
+            name for name in PYTHON_PACKAGES if importlib.util.find_spec(name) is None
+        ]
+        if not missing:
+            return
+        print("Webサイト用のPythonパッケージを準備しています。")
+        result = subprocess.run(
+            [sys.executable, "-m", "pip", "install", "-q", *missing],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            raise RuntimeError(result.stdout[-2000:] + result.stderr[-2000:])
+
     def _configure(self) -> None:
-        for directory in ("bin", "run", "lock", "state", "cache", "private", "ncalrpc"):
+        for directory in ("bin", "run"):
             (self.root / directory).mkdir(exist_ok=True)
-        (self.root / "private").chmod(0o700)
-        nginx = (
-            f"pid {self.root}/run/nginx.pid; error_log {self.root}/nginx.log;\n"
-            "events {} http { include /etc/nginx/mime.types; access_log off;\n"
-            f"server {{ listen {TARGET_IP}:80 default_server; root {self.root}/site; "
-            "index index.html; charset utf-8; location / { try_files $uri $uri/ =404; } }\n"
-            # 社内Webメールは未移植のため、寿司屋HPを誤って表示しない。
-            f"server {{ listen {TARGET_IP}:80; server_name mail.mikuriya-suisan.local; "
-            "return 404; } }\n"
+        (self.root / "nginx.conf").write_text(
+            nginx_config(
+                self.root,
+                sushi=(self.root / "nginx-sushi.conf.in").read_text(),
+                portal=(self.root / "nginx-portal.conf.in").read_text(),
+            )
         )
-        (self.root / "nginx.conf").write_text(nginx)
-        samba = (
-            (self.root / "smb.conf.in")
-            .read_text()
-            .replace("/srv/samba/staff", str(self.root / "share"))
-        )
-        additions = (
-            f"interfaces = {TARGET_IP}/32\nbind interfaces only = yes\n"
-            + "\n".join(
-                f"{key} = {self.root / directory}"
-                for key, directory in (
-                    ("lock directory", "lock"),
-                    ("state directory", "state"),
-                    ("cache directory", "cache"),
-                    ("private dir", "private"),
-                    ("pid directory", "run"),
-                    ("ncalrpc dir", "ncalrpc"),
+        for server in SAMBA_SERVERS:
+            for directory in samba_directories(server.workdir(self.root)):
+                directory.mkdir(parents=True, exist_ok=True)
+            (server.workdir(self.root) / "private").chmod(0o700)
+            server.config_path(self.root).write_text(
+                samba_config(
+                    (self.root / server.template).read_text(),
+                    address=server.address,
+                    workdir=server.workdir(self.root),
+                    shares={
+                        share: self.root / directory
+                        for share, directory in server.shares.items()
+                    },
                 )
             )
-            + f"\nlog file = {self.root}/samba.log\n"
-        )
-        (self.root / "smb.conf").write_text(
-            samba.replace("[global]", "[global]\n" + additions)
-        )
-        self._prepare_account()
-
-    def _prepare_account(self) -> None:
+        sushi, portal = SAMBA_SERVERS
         account = json.loads((self.root / "account.json").read_text())
-        username = account["username"]
+        self._prepare_account(sushi.config_path(self.root), *account.values())
+        self._prepare_account(portal.config_path(self.root), *PORTAL_ACCOUNT)
+
+    def _prepare_account(self, config: Path, username: str, password: str) -> None:
         import pwd
 
         try:
@@ -468,8 +499,8 @@ class Lab:
                 check=True,
             )
         subprocess.run(
-            ["smbpasswd", "-c", str(self.root / "smb.conf"), "-a", "-s", username],
-            input=f"{account['password']}\n{account['password']}\n",
+            ["smbpasswd", "-c", str(config), "-a", "-s", username],
+            input=f"{password}\n{password}\n",
             text=True,
             stdout=subprocess.DEVNULL,
             check=True,
@@ -507,7 +538,7 @@ class Lab:
         try:
             self._map_user(pid)
             os.kill(pid, signal.SIGCONT)
-            for _ in range(200):
+            for _ in range(int(STARTUP_TIMEOUT / POLL_INTERVAL)):
                 if self.process.poll() is not None:
                     raise RuntimeError((self.root / "startup.log").read_text()[-4000:])
                 if ready.exists():
@@ -515,7 +546,7 @@ class Lab:
                     self._open_sites()
                     print("準備ができました。コードセルから調査を始められます。")
                     return
-                time.sleep(0.1)
+                time.sleep(POLL_INTERVAL)
             raise RuntimeError(
                 "サービスの起動が完了しませんでした。startup.logを確認してください。"
             )
@@ -554,10 +585,11 @@ class Lab:
             for line in hosts.read_text().splitlines()
             if not line.endswith("# mikuriya-colab")
         ]
-        hosts.write_text(
-            "\n".join([*previous, f"{TARGET_IP} {TARGET_HOST} # mikuriya-colab", ""])
-        )
-        for tool in ("nmap", "curl", "smbclient"):
+        entries = [
+            f"{address} {host} # mikuriya-colab" for host, address in HOSTS.items()
+        ]
+        hosts.write_text("\n".join([*previous, *entries, ""]))
+        for tool in ("nmap", "dirb", "curl", "smbclient"):
             wrapper = self.root / "bin" / tool
             wrapper.write_text(
                 f"#!{sys.executable}\nimport sys\nsys.path.insert(0, {str(self.root)!r})\n"
@@ -691,17 +723,11 @@ class Lab:
 
 def serve(root: Path) -> None:
     subprocess.run(["ip", "link", "set", "lo", "up"], check=True)
-    subprocess.run(["ip", "address", "add", f"{TARGET_IP}/32", "dev", "lo"], check=True)
-    commands = (
-        ["nginx", "-c", str(root / "nginx.conf"), "-g", "daemon off;"],
-        [
-            "smbd",
-            "--foreground",
-            "--no-process-group",
-            "--debug-stdout",
-            "--configfile=" + str(root / "smb.conf"),
-        ],
-    )
+    for address in OPEN_PORTS:
+        subprocess.run(
+            ["ip", "address", "add", f"{address}/32", "dev", "lo"], check=True
+        )
+    targets = services(root, sys.executable)
     processes: list[subprocess.Popen] = []
     relays: list[Running] = []
 
@@ -716,11 +742,17 @@ def serve(root: Path) -> None:
             for site in SITES
         )
         # smbdは標準入力がEOFになると終了するため、監督プロセスがパイプを保持する。
-        for command in commands:
+        for target in targets:
             processes.append(
-                subprocess.Popen(command, stdin=subprocess.PIPE, start_new_session=True)
+                subprocess.Popen(
+                    target.command,
+                    stdin=subprocess.PIPE,
+                    start_new_session=True,
+                    cwd=target.cwd,
+                    env={**os.environ, **target.env},
+                )
             )
-        for _ in range(200):
+        for _ in range(int(STARTUP_TIMEOUT / POLL_INTERVAL)):
             if any(process.poll() is not None for process in processes):
                 nginx_log = (
                     (root / "nginx.log").read_text()
@@ -728,19 +760,19 @@ def serve(root: Path) -> None:
                     else ""
                 )
                 failed = [
-                    (command[0], process.returncode)
-                    for command, process in zip(commands, processes)
+                    (target.name, process.returncode)
+                    for target, process in zip(targets, processes)
                     if process.poll() is not None
                 ]
                 raise RuntimeError(
                     f"標的サービスが停止しました: {failed}\n" + nginx_log[-3000:]
                 )
             try:
-                for port in (80, 445):
-                    with socket.create_connection((TARGET_IP, port), timeout=0.1):
+                for endpoint in ready_endpoints():
+                    with socket.create_connection(endpoint, timeout=0.1):
                         pass
             except OSError:
-                time.sleep(0.1)
+                time.sleep(POLL_INTERVAL)
                 continue
             (root / "ready").touch()
             break
