@@ -9,6 +9,7 @@ on:
       - 'colab/colab_lab.py'
       - 'colab/colab_render.py'
       - 'colab/colab_web.py'
+      - 'colab/colab_targets.py'
       - 'colab/checkpoints.json'
       - 'docker/notebook/app/block_variants.py'
       - 'docker/notebook/app/data/**'
@@ -16,6 +17,11 @@ on:
       - 'docker/sushi/site/**'
       - 'docker/sushi/samba/smb.conf'
       - 'docker/sushi/samba/share/**'
+      - 'docker/sushi/nginx.conf'
+      - 'docker/sushi/webmail/**'
+      - 'docker/portal/nginx.conf'
+      - 'docker/portal/app/**'
+      - 'docker/portal/samba/**'
   workflow_dispatch:
 permissions:
   contents: read

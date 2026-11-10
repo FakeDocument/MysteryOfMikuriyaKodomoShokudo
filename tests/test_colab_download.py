@@ -92,6 +92,12 @@ class ColabDownloadTests(unittest.TestCase):
             self.assertTrue((root / "colab_render.py").is_file())
             self.assertTrue((root / "site/index.html").is_file())
             self.assertTrue((root / "smb.conf.in").is_file())
+            # 第3・4章の標的（社内Webメール・政府サーバー）も起動できるようにする。
+            self.assertTrue((root / "colab_targets.py").is_file())
+            self.assertTrue((root / "webmail/app.py").is_file())
+            self.assertTrue((root / "portal/app/main.py").is_file())
+            self.assertTrue(any((root / "portal-handover").rglob("*.txt")))
+            self.assertTrue(any((root / "portal-handoff").rglob("*.txt")))
             lesson = json.loads((root / "lesson.json").read_text())
             self.assertTrue(lesson["chapters"])
             self.assertTrue(lesson["questions"])

