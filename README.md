@@ -20,7 +20,7 @@
 
 ## Colab版（Docker不要）
 
-[Colabで開く](https://colab.research.google.com/github/FakeDocument/MysteryOfMikuriyaKodomoShokudo/blob/main/colab/MysteryOfMikuriyaKodomoShokudo-Colab.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/FakeDocument/MysteryOfMikuriyaKodomoShokudo/blob/main/colab/MysteryOfMikuriyaKodomoShokudo-Colab.ipynb)
 
 Googleアカウントでログインし、CPUランタイムで「調査環境を準備する」を実行してください。序章から終章までの教材を収録しています。調査環境は寿司屋のWebサイトと共有フォルダーまでで、Webメールや後続のサービスを使う調査はまだColab上では行えません。[Colab版の使い方](https://github.com/FakeDocument/MysteryOfMikuriyaKodomoShokudo/blob/main/colab/README.md)を参照してください。
 
