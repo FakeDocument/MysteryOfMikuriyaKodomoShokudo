@@ -286,6 +286,27 @@ class ColabConversionTests(unittest.TestCase):
                 self.assertIn(item["prompt"], form_text)
                 self.assertIn(placeholder, form_text)
 
+    def test_設問文と最初の回答欄の説明を別の段落に分ける(self) -> None:
+        question = {
+            **self.question,
+            "answer_fields": [{"id": "port", "label": "番号", "placeholder": "例: 80"}],
+        }
+        [cell] = builder.block_cells(
+            {"type": "questions", "id": "questions", "items": [question]}, "chapter"
+        )
+        lines = "".join(cell["source"]).splitlines()
+        first_field = next(i for i, line in enumerate(lines) if "@param" in line)
+        # Colabは連続する @markdown 行を改行でつないだMarkdownとして表示する。
+        markdown = "\n".join(
+            line.removeprefix("# @markdown").removeprefix(" ")
+            for line in lines[:first_field]
+            if line.startswith("# @markdown")
+        )
+        paragraphs = markdown.split("\n\n")
+        self.assertFalse(
+            any(question["prompt"] in p and "例: 80" in p for p in paragraphs)
+        )
+
     def test_設問ごとに説明と回答欄を1つのセルにまとめる(self) -> None:
         second = {**self.question, "id": "second", "prompt": "次の値は？"}
         cells = self.generate(
