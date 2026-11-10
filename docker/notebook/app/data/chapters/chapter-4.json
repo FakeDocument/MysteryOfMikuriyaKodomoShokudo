@@ -117,6 +117,19 @@
                   "第1章で、ホストに開いているサービスを調べたページを見返す。",
                   "第3章で特定したドメインにも、同じ調査方法を使える。"
                 ]
+              },
+              {
+                "type": "dialogue",
+                "id": "follow-up",
+                "visible_when": {"event": "question_solved"},
+                "heading": {"kicker": "FOLLOW-UP", "title": "調査結果を受けて"},
+                "messages": [
+                  {
+                    "speaker": "player",
+                    "$local": {"text": "Webサイトが2つに、ファイル共有が1つか。"},
+                    "$colab": {"text": "Webサイトが2つに、ファイル共有が1つか。サイトは `http://kaiiki-hozen.local/` と `http://kaiiki-hozen.local:8080/` だな。"}
+                  }
+                ]
               }
             ]
           }
@@ -141,8 +154,7 @@
             "type": "question",
             "id": "ch4_catalog_entry",
             "label": "調査 02",
-            "$local": {"prompt": "445番のファイル共有を調べ、文書目録に入るための閲覧コードを記録してください。まだログイン情報がなくても、共有一覧を確認できるでしょうか。"},
-            "$colab": {"prompt": "445番のファイル共有を調べ、文書目録に入るための閲覧コードを記録してください。まだログイン情報がなくても、共有一覧を確認できるでしょうか。2つのWebサイトは `http://kaiiki-hozen.local/` と `http://kaiiki-hozen.local:8080/` から開けます。"},
+            "prompt": "445番のファイル共有を調べ、文書目録に入るための閲覧コードを記録してください。まだログイン情報がなくても、共有一覧を確認できるでしょうか。",
             "placeholder": "閲覧コード",
             "input_mode": "latin",
             "blocks": [
