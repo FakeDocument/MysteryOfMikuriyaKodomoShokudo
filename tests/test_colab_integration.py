@@ -72,6 +72,38 @@ class ColabIntegrationTests(unittest.TestCase):
         )
         self.assertTrue(shared.stdout.strip())
 
+    def test_コードセルのDIRBが標準ワードリストで標的サイトのディレクトリを見つける(
+        self,
+    ) -> None:
+        import re
+        import subprocess
+
+        from colab_lab import TARGET_HOST
+
+        wordlist = Path("/usr/share/dirb/wordlists/common.txt")
+        words = set(wordlist.read_text(errors="replace").split())
+        site = Path(__file__).resolve().parents[1] / "docker" / "sushi" / "site"
+        # 標的サイトに実在し、標準ワードリストにも載るディレクトリは見つかるはず
+        expected = {
+            entry.name for entry in site.iterdir() if entry.is_dir()
+        } & words
+        self.assertTrue(expected)
+        # プレイヤーと同じく、PATH上のラッパーから実行する
+        result = subprocess.run(
+            ["dirb", f"http://{TARGET_HOST}/", str(wordlist), "-r", "-S"],
+            capture_output=True,
+            text=True,
+            timeout=300,
+            check=True,
+        )
+        found = set(
+            re.findall(
+                rf"==> DIRECTORY: http://{re.escape(TARGET_HOST)}/([^/\s]+)/",
+                result.stdout,
+            )
+        )
+        self.assertLessEqual(expected, found)
+
     def curl(self, *arguments: str) -> str:
         return self.lab.run("curl", "--noproxy", "*", "-fsS", *arguments).stdout
 

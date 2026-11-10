@@ -55,6 +55,7 @@ TOOLS = (
     "smbpasswd",
     "smbclient",
     "nmap",
+    "dirb",
     "curl",
     "ip",
     "unshare",
@@ -411,6 +412,7 @@ class Lab:
                         "samba",
                         "smbclient",
                         "nmap",
+                        "dirb",
                         "curl",
                         "iproute2",
                         "util-linux",
@@ -587,7 +589,7 @@ class Lab:
             f"{address} {host} # mikuriya-colab" for host, address in HOSTS.items()
         ]
         hosts.write_text("\n".join([*previous, *entries, ""]))
-        for tool in ("nmap", "curl", "smbclient"):
+        for tool in ("nmap", "dirb", "curl", "smbclient"):
             wrapper = self.root / "bin" / tool
             wrapper.write_text(
                 f"#!{sys.executable}\nimport sys\nsys.path.insert(0, {str(self.root)!r})\n"
