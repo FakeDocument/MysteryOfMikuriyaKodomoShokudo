@@ -1,0 +1,115 @@
+# /// script
+# requires-python = ">=3.12"
+# dependencies = ["numpy", "pillow", "imageio-ffmpeg", "budoux"]
+# ///
+"""PVの試作を書き出す。
+
+    uv run promo/pv/build.py            # 動画を書き出す
+    uv run promo/pv/build.py --stills   # 確認用の静止画だけ書き出す
+"""
+
+from __future__ import annotations
+
+import argparse
+import subprocess
+from collections.abc import Callable
+from dataclasses import dataclass
+from pathlib import Path
+
+import imageio_ffmpeg
+import numpy as np
+from PIL import Image
+
+import audio
+import scene_hook
+import scene_letter
+from pixel import FPS, OUT_H, OUT_W, upscale
+
+OUT_DIR = Path(__file__).resolve().parent / "build"
+
+
+@dataclass(frozen=True)
+class Scene:
+    name: str
+    duration: float
+    render: Callable[[float], np.ndarray]
+
+
+SCENES = (
+    Scene("hook", scene_hook.DURATION, scene_hook.render),
+    Scene("letter", scene_letter.DURATION, scene_letter.render),
+)
+
+
+def scene_at(t: float) -> tuple[Scene, float, float]:
+    start = 0.0
+    for scene in SCENES:
+        if t < start + scene.duration:
+            return scene, t - start, start
+        start += scene.duration
+    last = SCENES[-1]
+    return last, last.duration - 1e-6, start - last.duration
+
+
+def total_duration() -> float:
+    return sum(s.duration for s in SCENES)
+
+
+def build_audio(path: Path) -> None:
+    rng = np.random.default_rng(1)
+    track = audio.silence(total_duration())
+    audio.place(track, audio.room_tone(total_duration(), rng), 0.0)
+    for start, end in scene_hook.writing_spans():
+        audio.place(track, audio.pencil_scratch(end - start, rng), start)
+    letter_start = scene_hook.DURATION
+    for shot in scene_letter.SHOTS:
+        audio.place(track, audio.square_blip((523.3, 392.0), 0.045), letter_start + shot.start)
+    audio.write_wav(path, track)
+
+
+def write_stills(times: tuple[float, ...]) -> None:
+    OUT_DIR.mkdir(exist_ok=True)
+    for t in times:
+        scene, local, _ = scene_at(t)
+        frame = scene.render(local)
+        img = Image.frombytes("RGB", (OUT_W, OUT_H), upscale(frame))
+        img.resize((OUT_W // 2, OUT_H // 2), Image.Resampling.NEAREST).save(
+            OUT_DIR / f"still_{t:05.2f}.png"
+        )
+
+
+def write_video(path: Path) -> None:
+    OUT_DIR.mkdir(exist_ok=True)
+    wav = OUT_DIR / "audio.wav"
+    build_audio(wav)
+    cmd = [
+        imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-loglevel", "error",
+        "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{OUT_W}x{OUT_H}", "-r", str(FPS), "-i", "-",
+        "-i", str(wav),
+        "-c:v", "libx264", "-preset", "slow", "-crf", "16", "-pix_fmt", "yuv420p",
+        "-c:a", "aac", "-b:a", "192k", "-shortest", "-movflags", "+faststart",
+        str(path),
+    ]
+    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
+    assert proc.stdin is not None
+    frames = int(round(total_duration() * FPS))
+    for i in range(frames):
+        scene, local, _ = scene_at(i / FPS)
+        proc.stdin.write(upscale(scene.render(local)))
+    proc.stdin.close()
+    if proc.wait() != 0:
+        raise RuntimeError("ffmpegでの書き出しに失敗しました")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--stills", action="store_true")
+    args = parser.parse_args()
+    if args.stills:
+        write_stills((2.6, 4.6, 6.5, 8.8, 11.5))
+        return
+    write_video(OUT_DIR / "pv_intro_draft.mp4")
+
+
+if __name__ == "__main__":
+    main()
