@@ -1,7 +1,7 @@
-"""0:05〜0:09 依頼書：机の上の依頼書を、接写から段階的に引いて見せる。
+"""机の上の依頼書。CMへの割り込みで、指定した語句の接写を見せるのに使う。
 
 本文は調査ノートの序章JSONから読み込み、作中の依頼書と食い違わないようにする。
-カットごとに読ませる一文を決め、それ以外を網点の影で落として視線を誘導する。
+見せたい語句以外は影で落として視線を誘導する。
 """
 
 from __future__ import annotations
@@ -25,7 +25,6 @@ from pixel import (
     FontSpec,
     Glyph,
     child_glyph,
-    dither_fade,
     dither_mix,
     glyph_mask,
     paint_glyph,
@@ -37,8 +36,6 @@ PROLOGUE = (
     Path(__file__).resolve().parents[2]
     / "docker/notebook/app/data/chapters/prologue.json"
 )
-
-DURATION = 7.0
 
 CHARS_PER_LINE = 14
 CHAR_STEP = 18
@@ -55,27 +52,6 @@ WOOD_DARK = (58, 36, 26)
 WOOD = (92, 58, 38)
 WOOD_LIGHT = (128, 84, 52)
 WOOD_SEAM = (40, 24, 18)
-
-SPOT_DELAY = 0.12
-SPOT_RAMP = 0.35
-SNAP_SEC = 0.05
-
-
-@dataclass(frozen=True)
-class Shot:
-    start: float
-    scale: int  # ワールド1画素を出力の何pxにするか（1920と1080を割り切れる値）
-    focus: tuple[str, ...]  # 読ませたい文。これ以外を影で落とす
-    drift_x: float = 0.0  # 1秒あたりの横移動量（ワールド画素）
-    offset_x: int = 0
-
-
-SHOTS = (
-    Shot(0.0, 6, ("食堂へ来たあとから、いなくなりました。",), drift_x=4.0),
-    Shot(2.3, 4, ("「家出かもしれない」って、さがしてくれません。",), drift_x=3.0),
-    Shot(4.6, 3, ("「エマちゃんは、そろそろころあいね」",)),
-)
-
 
 def _load_letter() -> dict:
     data = json.loads(PROLOGUE.read_text(encoding="utf-8"))
@@ -238,27 +214,14 @@ def _world() -> np.ndarray:
 
 
 WORLD = _world()
-FOCUS = tuple(_focus_mask(s.focus) for s in SHOTS)
 
 
-def _shot_at(t: float) -> int:
-    index = 0
-    for i, shot in enumerate(SHOTS):
-        if t >= shot.start:
-            index = i
-    return index
-
-
-def render(t: float) -> np.ndarray:
-    i = _shot_at(t)
-    shot, local = SHOTS[i], t - SHOTS[i].start
-    w, h = OUT_W // shot.scale, OUT_H // shot.scale
-    fx, fy = _focus_center(shot.focus)
-    x0 = int(np.clip(fx - w / 2 + shot.offset_x + local * shot.drift_x, 0, WORLD_W - w))
+def closeup(phrase: str, scale: int = 6) -> np.ndarray:
+    """指定した語句を中心にした依頼書の接写。語句以外は影で落とす（CMへの割り込みに使う）。"""
+    focus = _focus_mask((phrase,))
+    w, h = OUT_W // scale, OUT_H // scale
+    fx, fy = _focus_center((phrase,))
+    x0 = int(np.clip(fx - w / 2, 0, WORLD_W - w))
     y0 = int(np.clip(fy - h / 2, 0, WORLD_H - h))
     frame = WORLD[y0 : y0 + h, x0 : x0 + w].copy()
-    amount = (local - SPOT_DELAY) / SPOT_RAMP
-    frame = spotlight(frame, FOCUS[i][y0 : y0 + h, x0 : x0 + w], amount)
-    if shot.start > 0 and local < SNAP_SEC:
-        frame = dither_fade(frame, 0.5)
-    return frame
+    return spotlight(frame, focus[y0 : y0 + h, x0 : x0 + w], 1.0)

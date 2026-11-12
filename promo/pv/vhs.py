@@ -49,10 +49,18 @@ def _scanlines() -> np.ndarray:
     return lines[:, None]
 
 
-def _row_offsets(t: float, rng: np.random.Generator) -> np.ndarray:
-    """行ごとの横ずれ（画素）。ゆるい波と、下端のヘッド切り替えノイズ。"""
+def _row_offsets(t: float, rng: np.random.Generator, boost: float) -> np.ndarray:
+    """行ごとの横ずれ（画素）。ゆるい波と、下端のヘッド切り替えノイズ。
+
+    boost（0〜1）が大きいほど揺れが強まり、太いトラッキングの乱れが常に出る。
+    """
     y = np.arange(H, dtype=np.float32)
-    dx = 1.4 * np.sin(y * 0.021 + t * 2.3) + 0.8 * np.sin(y * 0.11 - t * 7.0)
+    amp = 1 + boost * 9
+    dx = amp * (1.4 * np.sin(y * 0.021 + t * 2.3) + 0.8 * np.sin(y * 0.11 - t * 7.0))
+    if boost > 0:
+        band_y = int(H * ((t * 1.7) % 1.0))
+        band = np.abs(y - band_y) < 20 + boost * 120
+        dx[band] += rng.normal(boost * 60, boost * 25, int(band.sum()))
     tail = slice(H - HEAD_SWITCH_ROWS, H)
     dx[tail] += 18 + rng.normal(0, 6, HEAD_SWITCH_ROWS)
     # ときどき細いトラッキングの乱れが画面を流れる（数秒に一度、0.5秒ほど）
@@ -89,7 +97,11 @@ def _enlarge_mask(img: Image.Image) -> np.ndarray:
     return np.asarray(img.resize((W, H), Image.Resampling.NEAREST)) > 0
 
 
-def apply(frame: np.ndarray, t: float, seed: int = 0) -> np.ndarray:
+def apply(frame: np.ndarray, t: float, boost: float = 0.0, strength: float = 1.0,
+          seed: int = 0) -> np.ndarray:
+    """劣化をかける。strength（0〜1）は元の映像との混ぜ具合で、0なら何もしない。"""
+    if strength <= 0:
+        return frame
     rng = np.random.default_rng(seed + int(t * 1000))
     f = frame.astype(np.float32) / 255.0
 
@@ -97,7 +109,7 @@ def apply(frame: np.ndarray, t: float, seed: int = 0) -> np.ndarray:
     f[osd_shadow & ~osd_text] *= 0.15
     f[osd_text] = 0.95
 
-    dx = _row_offsets(t, rng)
+    dx = _row_offsets(t, rng, boost)
     f = f[_YY, np.clip(_XX - dx[:, None], 0, W - 1)]
 
     # 輝度と色差に分け、色差だけ横に大きくにじませてずらす
@@ -105,8 +117,9 @@ def apply(frame: np.ndarray, t: float, seed: int = 0) -> np.ndarray:
     y = 0.299 * r + 0.587 * g + 0.114 * b
     i = 0.596 * r - 0.274 * g - 0.322 * b
     q = 0.211 * r - 0.523 * g + 0.312 * b
-    i = np.roll(_box_blur_x(i, CHROMA_BLUR), CHROMA_SHIFT, axis=1) * 0.85
-    q = np.roll(_box_blur_x(q, CHROMA_BLUR), CHROMA_SHIFT, axis=1) * 0.85
+    shift = CHROMA_SHIFT + int(boost * 14)
+    i = np.roll(_box_blur_x(i, CHROMA_BLUR), shift, axis=1) * 0.85
+    q = np.roll(_box_blur_x(q, CHROMA_BLUR), shift, axis=1) * 0.85
     y = _box_blur_x(y, 3)
     out = np.stack(
         [y + 0.956 * i + 0.621 * q, y - 0.272 * i - 0.647 * q, y - 1.106 * i + 1.703 * q], axis=-1
@@ -114,9 +127,12 @@ def apply(frame: np.ndarray, t: float, seed: int = 0) -> np.ndarray:
 
     # 黒浮き・ノイズ・走査線・周辺減光
     out = out * 0.88 + 0.05
-    grain = rng.normal(0, 0.035, (H // 2, W // 2)).astype(np.float32)
+    grain = rng.normal(0, 0.035 + boost * 0.06, (H // 2, W // 2)).astype(np.float32)
     out += grain.repeat(2, 0).repeat(2, 1)[..., None]
     tail = slice(H - HEAD_SWITCH_ROWS, H)
     out[tail] += rng.normal(0, 0.12, (HEAD_SWITCH_ROWS, W, 1)).astype(np.float32)
     out *= _scanlines()[..., None] * _vignette()[..., None]
-    return (np.clip(out, 0, 1) * 255).astype(np.uint8)
+    out = np.clip(out, 0, 1) * 255
+    if strength < 1:
+        out = frame.astype(np.float32) * (1 - strength) + out * strength
+    return out.astype(np.uint8)

@@ -45,13 +45,6 @@ def square_blip(freqs: tuple[float, ...], step: float, volume: float = 0.12) -> 
     return np.concatenate(parts).astype(np.float32)
 
 
-def room_tone(duration: float, rng: np.random.Generator, volume: float = 0.012) -> np.ndarray:
-    n = int(SR * duration)
-    noise = rng.normal(0, 1, n)
-    kernel = np.ones(200) / 200
-    return (np.convolve(noise, kernel, mode="same") * volume * 14).astype(np.float32)
-
-
 def write_wav(path: Path, track: np.ndarray) -> None:
     peak = float(np.max(np.abs(track))) or 1.0
     data = (np.clip(track / max(peak, 1.0), -1, 1) * 32767).astype("<i2")
@@ -80,13 +73,6 @@ def _env(n: int, attack: float = 0.004, release: float = 0.03) -> np.ndarray:
     return np.clip(np.minimum(t / attack, (dur - t) / release), 0, 1).astype(np.float32)
 
 
-def square_note(freq: float, dur: float, duty: float = 0.25, volume: float = 0.08) -> np.ndarray:
-    n = int(SR * dur)
-    phase = (np.arange(n) * freq / SR) % 1.0
-    wave_ = np.where(phase < duty, 1.0, -1.0)
-    return (wave_ * _env(n) * volume).astype(np.float32)
-
-
 def triangle_note(freq: float, dur: float, volume: float = 0.14) -> np.ndarray:
     n = int(SR * dur)
     phase = (np.arange(n) * freq / SR) % 1.0
@@ -94,55 +80,6 @@ def triangle_note(freq: float, dur: float, volume: float = 0.14) -> np.ndarray:
     # ファミコン風に16段階へ量子化する
     wave_ = np.round(wave_ * 7.5) / 7.5
     return (wave_ * _env(n) * volume).astype(np.float32)
-
-
-def noise_hit(dur: float, rng: np.random.Generator, volume: float = 0.05) -> np.ndarray:
-    n = int(SR * dur)
-    t = np.arange(n) / SR
-    return (rng.choice([-1.0, 1.0], n) * np.exp(-t / (dur * 0.25)) * volume).astype(np.float32)
-
-
-def sequence(track_len: float, bpm: float, notes: tuple[Note, ...],
-             voice: str, rng: np.random.Generator | None = None) -> np.ndarray:
-    beat = 60.0 / bpm
-    out = silence(track_len)
-    for start, length, note in notes:
-        dur = length * beat * 0.92
-        if voice == "lead":
-            clip = square_note(midi_hz(note), dur)
-        elif voice == "bass":
-            clip = triangle_note(midi_hz(note), dur)
-        else:
-            assert rng is not None
-            clip = noise_hit(min(dur, 0.06), rng)
-        place(out, clip, start * beat)
-    return out
-
-
-FRONT_BPM = 120.0
-# 「表の顔」の明るい曲。3小節目は解決させず、次の場面で途切れる前提にする
-FRONT_LEAD: tuple[Note, ...] = (
-    (0, .5, 76), (.5, .5, 79), (1, 1, 84), (2, .5, 83), (2.5, .5, 81), (3, 1, 79),
-    (4, .5, 81), (4.5, .5, 84), (5, .5, 81), (5.5, .5, 77), (6, 1, 79), (7, 1, 76),
-    (8, .5, 74), (8.5, .5, 76), (9, .5, 79), (9.5, .5, 81), (10, .5, 84), (10.5, .5, 86),
-    (11, 1, 88),
-)
-FRONT_BASS: tuple[Note, ...] = tuple(
-    (b + h * 0.5, 0.5, root + (7 if h else 0))
-    for b, root in ((0, 48), (1, 48), (2, 48), (3, 48), (4, 53), (5, 53), (6, 55), (7, 55),
-                    (8, 48), (9, 48), (10, 45), (11, 45))
-    for h in (0, 1)
-)
-FRONT_HATS: tuple[Note, ...] = tuple((i * 0.5, 0.25, 0) for i in range(24))
-
-
-def front_theme(rng: np.random.Generator) -> np.ndarray:
-    length = 12 * 60.0 / FRONT_BPM
-    return (
-        sequence(length, FRONT_BPM, FRONT_LEAD, "lead")
-        + sequence(length, FRONT_BPM, FRONT_BASS, "bass")
-        + sequence(length, FRONT_BPM, FRONT_HATS, "hat", rng)
-    )
 
 
 # ---- テープの質感 ------------------------------------------------------------
@@ -176,13 +113,145 @@ def tape_hiss(duration: float, rng: np.random.Generator, volume: float = 0.006) 
     return (np.diff(noise, prepend=0.0) * volume).astype(np.float32)
 
 
-def front_theme_tape(rng: np.random.Generator) -> np.ndarray:
-    """「表の顔」の曲をオルゴールで鳴らし、古いテープで再生したように揺らして丸める。"""
-    length = 12 * 60.0 / FRONT_BPM
-    beat = 60.0 / FRONT_BPM
-    out = silence(length)
-    for start, _, note in FRONT_LEAD:
-        place(out, music_box_note(midi_hz(note + 12), 0.6), start * beat)
-    for start, length_beats, note in FRONT_BASS[::2]:
-        place(out, triangle_note(midi_hz(note), length_beats * 2 * beat * 0.9, volume=0.05), start * beat)
-    return lowpass(wow_flutter(out))
+def static_burst(duration: float, rng: np.random.Generator, volume: float = 0.10) -> np.ndarray:
+    """テープの割り込みのノイズ：ざらついた雑音に、低い唸りを混ぜる。"""
+    n = int(SR * duration)
+    t = np.arange(n) / SR
+    noise = rng.normal(0, 1, n) * (0.6 + 0.4 * np.sign(np.sin(2 * np.pi * 31 * t)))
+    hum = np.sin(2 * np.pi * 60 * t) * 0.6
+    env = np.clip(np.minimum(t / 0.01, (duration - t) / 0.03), 0, 1)
+    return ((noise + hum) * env * volume).astype(np.float32)
+
+
+OMINOUS_BPM = 66.0
+# 短調で下がっていく、間の多い旋律（拍・長さ・音）
+OMINOUS_LEAD: tuple[Note, ...] = (
+    (0, 2, 69), (2, 2, 64), (4, 2, 65), (6, 2, 64),
+    (8, 2, 69), (10, 2, 64), (12, 2, 72), (14, 2, 71),
+    (16, 2, 69), (18, 2, 64), (20, 2, 65), (22, 2, 63),
+)
+
+
+def ominous_theme(duration: float) -> np.ndarray:
+    """不穏な曲：オルゴールの短調の旋律に低い唸りを重ねる。CMのあとの紹介PVなので揺れは控えめ。"""
+    beat = 60.0 / OMINOUS_BPM
+    out = silence(duration)
+    loop = 24 * beat
+    k = 0
+    while k * loop < duration:
+        for start, _, note in OMINOUS_LEAD:
+            place(out, music_box_note(midi_hz(note), 1.2, volume=0.07), k * loop + start * beat)
+        k += 1
+    out = lowpass(wow_flutter(out, wow_depth=0.0015, flutter_depth=0.0004), 6)
+    fade_in = np.clip(np.arange(out.size) / (SR * 1.5), 0, 1).astype(np.float32)
+    return out * fade_in + drone(duration, volume=0.05)
+
+
+def tape_stop(x: np.ndarray, duration: float) -> np.ndarray:
+    """テープが止まるときのように、再生速度を0まで落として音程を下げる。"""
+    n = int(SR * duration)
+    rate = np.linspace(1.0, 0.0, n) ** 1.6
+    idx = np.cumsum(rate)
+    out = np.interp(idx, np.arange(x.size), x).astype(np.float32)
+    return lowpass(out * np.linspace(1.0, 0.3, n).astype(np.float32), 8)
+
+
+def drone(duration: float, volume: float = 0.07) -> np.ndarray:
+    """不穏な低い唸り。わずかにずれた2つの低音のうなりに、ゆっくりした膨らみをつける。"""
+    n = int(SR * duration)
+    t = np.arange(n) / SR
+    tone = np.sin(2 * np.pi * 55.0 * t) + np.sin(2 * np.pi * 58.3 * t) + 0.3 * np.sin(2 * np.pi * 110.4 * t)
+    swell = np.clip(t / (duration * 0.6), 0, 1) * np.clip((duration - t) / 0.3, 0, 1)
+    return (tone * swell * volume).astype(np.float32)
+
+
+# ---- 和風のCM曲（仮。音源はあとで差し替える） ---------------------------------
+
+CM_BPM = 120.0
+CM_BARS = 4
+# ヨナ抜き音階（D・E・G・A・B）の元気な旋律。最後の小節は駆け上がって、次の場面で途切れる
+CM_LEAD: tuple[Note, ...] = (
+    (0, .5, 69), (.5, .5, 69), (1, .5, 71), (1.5, .5, 74), (2, 1, 76), (3, 1, 74),
+    (4, .5, 76), (4.5, .5, 79), (5, .5, 81), (5.5, .5, 79), (6, .5, 76), (6.5, .5, 74), (7, 1, 71),
+    (8, .5, 69), (8.5, .5, 71), (9, .5, 74), (9.5, .5, 76), (10, 1, 79), (11, 1, 76),
+    (12, .5, 74), (12.5, .5, 76), (13, .5, 79), (13.5, .5, 81), (14, 1, 86), (15, 1, 86),
+)
+# 低い三味線で、各拍の頭に根音と5度を交互に弾く
+CM_BASS: tuple[Note, ...] = tuple((b, 0.5, 50 if b % 2 == 0 else 57) for b in range(CM_BARS * 4))
+# 太鼓：「ドン」を1拍目と3拍目、「カッ」を2拍目と4拍目の裏に置く
+CM_DON = tuple(float(b) for b in range(CM_BARS * 4) if b % 2 == 0)
+CM_KA = tuple(b + 0.5 for b in range(CM_BARS * 4) if b % 2 == 1)
+
+# 割り込みを1回受けるごとの崩れ方：音程のぶれ（セント）、半音ずれた音の割合、テープの揺れ
+SOUR_LEVELS = ((0.0, 0.0, 0.0), (35.0, 0.2, 0.6), (65.0, 0.45, 1.0))
+
+
+def pluck(freq: float, dur: float, brightness: float = 0.5, volume: float = 0.16) -> np.ndarray:
+    """三味線風の撥弦（Karplus-Strong）。周期ごとに平均をとって減衰させ、少しだけ歪ませて弦のさわりを出す。"""
+    n = int(SR * dur)
+    period = max(2, int(round(SR / freq)))
+    rng = np.random.default_rng(int(freq * 1000) % 2**32)
+    buf = rng.uniform(-1, 1, period).astype(np.float32)
+    out = np.empty(n, dtype=np.float32)
+    decay = 0.996 - (1 - brightness) * 0.01
+    for i in range(0, n, period):
+        k = min(period, n - i)
+        out[i : i + k] = buf[:k]
+        buf = (decay * 0.5 * (buf + np.roll(buf, -1))).astype(np.float32)
+    out = np.tanh(out * 1.8) / np.tanh(1.8)
+    return (out * _env(n, attack=0.001, release=0.02) * volume).astype(np.float32)
+
+
+def taiko(dur: float = 0.35, volume: float = 0.35) -> np.ndarray:
+    """太鼓の「ドン」：音程が急に下がる低い正弦波。"""
+    n = int(SR * dur)
+    t = np.arange(n) / SR
+    freq = 70 + 90 * np.exp(-t / 0.03)
+    phase = 2 * np.pi * np.cumsum(freq) / SR
+    return (np.sin(phase) * np.exp(-t / 0.12) * volume).astype(np.float32)
+
+
+def rim(rng: np.random.Generator, volume: float = 0.10) -> np.ndarray:
+    """太鼓の縁打ちの「カッ」：ごく短い明るい雑音。"""
+    n = int(SR * 0.04)
+    t = np.arange(n) / SR
+    click = np.diff(rng.normal(0, 1, n + 1)) * np.exp(-t / 0.008)
+    return (click * volume).astype(np.float32)
+
+
+def cm_theme(sour_points: tuple[float, ...] = (), tail: float = 0.0, seed: int = 7) -> np.ndarray:
+    """和風で元気なCM曲。最初は素直に鳴らし、sour_points（秒）を過ぎるたびに音を外していく。
+
+    tail 秒だけ長く合成し、最後の音の余韻を残す（テープ停止に使う）。
+    """
+    rng = np.random.default_rng(seed)
+    beat = 60.0 / CM_BPM
+    out = silence(CM_BARS * 4 * beat + tail)
+
+    def level(at: float) -> int:
+        return min(sum(at >= p for p in sour_points), len(SOUR_LEVELS) - 1)
+
+    def sour(note: int, at: float) -> float:
+        cents, wrong_rate, _ = SOUR_LEVELS[level(at)]
+        shift = rng.normal(0, cents) / 100 if cents else 0.0
+        if rng.random() < wrong_rate:
+            shift += rng.choice([-1.0, 1.0])
+        return midi_hz(note) * 2 ** (shift / 12)
+
+    for start, length, note in CM_LEAD:
+        at = start * beat
+        place(out, pluck(sour(note, at), max(length * beat, 0.45), brightness=0.8), at)
+    for start, length, note in CM_BASS:
+        at = start * beat
+        place(out, pluck(sour(note, at), 0.45, brightness=0.3, volume=0.10), at)
+    for b in CM_DON:
+        place(out, taiko(), b * beat)
+    for b in CM_KA:
+        place(out, rim(rng), b * beat)
+
+    # テープの揺れは、揺れのない版と強い版を、崩れ具合に応じて混ぜて強めていく
+    warped = wow_flutter(out, wow_depth=0.010, flutter_depth=0.0018)
+    t = np.arange(out.size) / SR
+    coarse = t[:: SR // 100]
+    mix = np.interp(t, coarse, [SOUR_LEVELS[level(x)][2] for x in coarse]).astype(np.float32)
+    return out * (1 - mix) + warped * mix
