@@ -19,19 +19,19 @@ FPS = 30
 WORLD_W, WORLD_H = 640, 360
 
 
-def _find_klee() -> str:
-    """macOS付属の手書き風書体Klee。オンデマンド資産なので場所が固定されていない。"""
-    hits = sorted(glob.glob("/System/Library/AssetsV2/com_apple_MobileAsset_Font*/*/AssetData/Klee.ttc"))
+def find_system_font(filename: str, family: str) -> str:
+    """macOSのオンデマンド書体（Klee、游明朝など）を探す。資産の置き場所は固定されていない。"""
+    hits = sorted(glob.glob(f"/System/Library/AssetsV2/com_apple_MobileAsset_Font*/*/AssetData/{filename}"))
     if not hits:
         raise FileNotFoundError(
-            "Klee書体が見つかりません。Font Book で「Klee」をダウンロードしてください"
+            f"{family}書体が見つかりません。Font Book で「{family}」をダウンロードしてください"
         )
     return hits[0]
 
 
 FontSpec = tuple[str, int]
 
-KLEE = _find_klee()
+KLEE = find_system_font("Klee.ttc", "Klee")
 FONT_HOOK: FontSpec = (KLEE, 40)
 FONT_LETTER: FontSpec = (KLEE, 16)
 FONT_SIGNATURE: FontSpec = (KLEE, 22)
@@ -196,14 +196,13 @@ def bold(mask: np.ndarray) -> np.ndarray:
     return mask | np.roll(mask, 1, axis=1) | np.roll(mask, 1, axis=0)
 
 
-def upscale(frame: np.ndarray) -> bytes:
-    """ワールド画素を最近傍補間で出力解像度まで拡大し、生のRGBバイト列にする。"""
+def upscale(frame: np.ndarray) -> np.ndarray:
+    """ワールド画素を最近傍補間で出力解像度（1920x1080）まで拡大する。"""
     h, w = frame.shape[:2]
     sx, sy = OUT_W // w, OUT_H // h
     if sx != sy or sx * w != OUT_W or sy * h != OUT_H:
         raise ValueError(f"整数倍で拡大できない大きさです: {w}x{h}")
-    big = frame.repeat(sy, axis=0).repeat(sx, axis=1)
-    return big.astype(np.uint8).tobytes()
+    return frame.repeat(sy, axis=0).repeat(sx, axis=1).astype(np.uint8)
 
 
 def ease_out(t: float) -> float:

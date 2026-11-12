@@ -22,8 +22,10 @@ from PIL import Image
 
 import audio
 import scene_hook
+import scene_front
 import scene_letter
 import scene_office
+import vhs
 from pixel import FPS, OUT_H, OUT_W, upscale
 
 OUT_DIR = Path(__file__).resolve().parent / "build"
@@ -40,6 +42,7 @@ SCENES = (
     Scene("hook", scene_hook.DURATION, scene_hook.render),
     Scene("letter", scene_letter.DURATION, scene_letter.render),
     Scene("office", scene_office.DURATION, scene_office.render),
+    Scene("front", scene_front.DURATION, scene_front.render),
 )
 
 
@@ -75,21 +78,31 @@ def build_audio(path: Path) -> None:
     }
     for t, kind in scene_office.audio_events():
         audio.place(track, clips[kind], office_start + t)
+    front_start = office_start + scene_office.DURATION
+    cues = scene_front.audio_cues()
+    audio.place(track, audio.front_theme_tape(rng), front_start + cues["theme"])
+    audio.place(track, audio.tape_hiss(total_duration(), rng), 0.0)
+    audio.place(track, audio.square_blip((784.0, 1046.5), 0.05, volume=0.09), front_start + cues["sign"])
     audio.write_wav(path, track)
 
 
-def write_stills(times: tuple[float, ...]) -> None:
+def final_frame(t: float, use_vhs: bool) -> np.ndarray:
+    """場面を描いて出力解像度へ拡大し、必要ならVHSの劣化表現をかける。"""
+    scene, local, _ = scene_at(t)
+    frame = upscale(scene.render(local))
+    return vhs.apply(frame, t) if use_vhs else frame
+
+
+def write_stills(times: tuple[float, ...], use_vhs: bool) -> None:
     OUT_DIR.mkdir(exist_ok=True)
     for t in times:
-        scene, local, _ = scene_at(t)
-        frame = scene.render(local)
-        img = Image.frombytes("RGB", (OUT_W, OUT_H), upscale(frame))
+        img = Image.fromarray(final_frame(t, use_vhs))
         img.resize((OUT_W // 2, OUT_H // 2), Image.Resampling.NEAREST).save(
             OUT_DIR / f"still_{t:05.2f}.png"
         )
 
 
-def write_video(path: Path) -> None:
+def write_video(path: Path, use_vhs: bool) -> None:
     OUT_DIR.mkdir(exist_ok=True)
     wav = OUT_DIR / "audio.wav"
     build_audio(wav)
@@ -105,8 +118,7 @@ def write_video(path: Path) -> None:
     assert proc.stdin is not None
     frames = int(round(total_duration() * FPS))
     for i in range(frames):
-        scene, local, _ = scene_at(i / FPS)
-        proc.stdin.write(upscale(scene.render(local)))
+        proc.stdin.write(final_frame(i / FPS, use_vhs).tobytes())
     proc.stdin.close()
     if proc.wait() != 0:
         raise RuntimeError("ffmpegでの書き出しに失敗しました")
@@ -115,11 +127,13 @@ def write_video(path: Path) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--stills", action="store_true")
+    parser.add_argument("--no-vhs", action="store_true", help="VHSの劣化表現をかけずに書き出す")
     args = parser.parse_args()
+    use_vhs = not args.no_vhs
     if args.stills:
-        write_stills((12.4, 13.4, 15.0, 17.0, 18.9))
+        write_stills((2.6, 8.0, 18.9, 21.6, 24.9), use_vhs)
         return
-    write_video(OUT_DIR / "pv_intro_draft.mp4")
+    write_video(OUT_DIR / "pv_intro_draft.mp4", use_vhs)
 
 
 if __name__ == "__main__":
