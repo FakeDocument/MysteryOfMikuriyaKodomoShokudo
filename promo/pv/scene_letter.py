@@ -6,13 +6,10 @@
 
 from __future__ import annotations
 
-import itertools
 import json
-import re
 from dataclasses import dataclass
 from pathlib import Path
 
-import budoux
 import numpy as np
 
 from pixel import (
@@ -34,6 +31,7 @@ from pixel import (
     paint_glyph,
     spotlight,
 )
+from wrap_ja import wrap
 
 PROLOGUE = (
     Path(__file__).resolve().parents[2]
@@ -51,10 +49,6 @@ PAPER_X = 200
 PAPER_Y = 30
 WORLD_W = PAPER_X * 2 + PAPER_W
 
-# BudouXが途中で区切ってしまう語。PVで読ませる文の中にあるものを指定する
-KEEP_TOGETHER = ("ころあい", "佐々木笑真", "遠藤美咲")
-# 1行に収まらない長い文節を分けてよい位置（この文字の直後）
-SOFT_BREAK_AFTER = "」、。"
 FULLWIDTH_DIGITS = str.maketrans("0123456789", "０１２３４５６７８９")
 
 WOOD_DARK = (58, 36, 26)
@@ -91,44 +85,6 @@ def _load_letter() -> dict:
     raise KeyError("序章JSONに依頼書（request-letter）が見つかりません")
 
 
-def _segments(text: str) -> list[str]:
-    """BudouXで文節に分け、KEEP_TOGETHER の語の途中にある区切りは取り除く。"""
-    parts = budoux.load_default_japanese_parser().parse(text)
-    cuts = set(itertools.accumulate(len(p) for p in parts[:-1]))
-    for word in KEEP_TOGETHER:
-        for m in re.finditer(re.escape(word), text):
-            cuts -= set(range(m.start() + 1, m.end()))
-    bounds = [0, *sorted(cuts), len(text)]
-    return [text[a:b] for a, b in itertools.pairwise(bounds)]
-
-
-def _split_long(seg: str, width: int) -> list[str]:
-    """1行に収まらない文節を、括弧や読点の直後で分ける。分けられなければ文字単位で切る。"""
-    if len(seg) <= width:
-        return [seg]
-    soft = [i + 1 for i, ch in enumerate(seg[:width]) if ch in SOFT_BREAK_AFTER]
-    cut = soft[-1] if soft else width
-    return [seg[:cut], *_split_long(seg[cut:], width)]
-
-
-def _wrap(text: str, width: int) -> list[str]:
-    """文節の境目で折り返す。1文節が1行に収まらないときだけ文字単位で切る。"""
-    lines: list[str] = []
-    current = ""
-    for seg in _segments(text):
-        if current and len(current) + len(seg) > width:
-            lines.append(current)
-            current = ""
-        for piece in _split_long(seg, width):
-            if current and len(current) + len(piece) > width:
-                lines.append(current)
-                current = ""
-            current += piece
-    if current:
-        lines.append(current)
-    return lines
-
-
 @dataclass(frozen=True)
 class CharPos:
     block: int  # 何番目の文のまとまりか（宛名・本文の段落・日付・署名）
@@ -163,7 +119,7 @@ def _layout(seed: int = 11) -> LetterLayout:
         block = len(blocks)
         blocks.append(text)
         offset = 0
-        lines = _wrap(text, CHARS_PER_LINE) if x0 is None else [text]
+        lines = wrap(text, CHARS_PER_LINE) if x0 is None else [text]
         for line in lines:
             x = left if x0 is None else x0
             # 手書きでは数字も漢字と同じ幅で書くので、全角に揃えて描く
