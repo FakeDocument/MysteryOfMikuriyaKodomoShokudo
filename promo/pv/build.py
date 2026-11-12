@@ -23,6 +23,7 @@ from PIL import Image
 import audio
 import scene_hook
 import scene_letter
+import scene_office
 from pixel import FPS, OUT_H, OUT_W, upscale
 
 OUT_DIR = Path(__file__).resolve().parent / "build"
@@ -38,6 +39,7 @@ class Scene:
 SCENES = (
     Scene("hook", scene_hook.DURATION, scene_hook.render),
     Scene("letter", scene_letter.DURATION, scene_letter.render),
+    Scene("office", scene_office.DURATION, scene_office.render),
 )
 
 
@@ -64,6 +66,15 @@ def build_audio(path: Path) -> None:
     letter_start = scene_hook.DURATION
     for shot in scene_letter.SHOTS:
         audio.place(track, audio.square_blip((523.3, 392.0), 0.045), letter_start + shot.start)
+    office_start = letter_start + scene_letter.DURATION
+    # 吹き出しの文字送り音。話者ごとに高さを変える（主人公は高め、所長は低め）
+    clips = {
+        "pop": audio.square_blip((392.0, 587.3), 0.04, volume=0.10),
+        "blip:player": audio.square_blip((880.0,), 0.022, volume=0.05),
+        "blip:director": audio.square_blip((587.3,), 0.022, volume=0.05),
+    }
+    for t, kind in scene_office.audio_events():
+        audio.place(track, clips[kind], office_start + t)
     audio.write_wav(path, track)
 
 
@@ -106,7 +117,7 @@ def main() -> None:
     parser.add_argument("--stills", action="store_true")
     args = parser.parse_args()
     if args.stills:
-        write_stills((2.6, 4.6, 6.5, 8.8, 11.5))
+        write_stills((12.4, 13.4, 15.0, 17.0, 18.9))
         return
     write_video(OUT_DIR / "pv_intro_draft.mp4")
 
