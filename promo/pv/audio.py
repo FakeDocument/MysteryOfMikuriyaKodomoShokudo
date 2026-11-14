@@ -7,7 +7,9 @@ from pathlib import Path
 
 import numpy as np
 
-SR = 44100
+import garageband
+
+SR = garageband.SR
 
 
 def silence(duration: float) -> np.ndarray:
@@ -272,7 +274,7 @@ def drone(duration: float, volume: float = 0.07) -> np.ndarray:
     return (tone * swell * volume).astype(np.float32)
 
 
-# ---- 和風のCM曲（仮。音源はあとで差し替える） ---------------------------------
+# ---- 和風のCM曲 ----------------------------------------------------------------
 
 CM_BPM = 120.0
 CM_BARS = 4
@@ -283,7 +285,7 @@ CM_LEAD: tuple[Note, ...] = (
     (8, .5, 69), (8.5, .5, 71), (9, .5, 74), (9.5, .5, 76), (10, 1, 79), (11, 1, 76),
     (12, .5, 74), (12.5, .5, 76), (13, .5, 79), (13.5, .5, 81), (14, 1, 86), (15, 1, 86),
 )
-# 低い三味線で、各拍の頭に根音と5度を交互に弾く
+# 低い箏で、各拍の頭に根音と5度を交互に弾く
 CM_BASS: tuple[Note, ...] = tuple((b, 0.5, 50 if b % 2 == 0 else 57) for b in range(CM_BARS * 4))
 # 太鼓：「ドン」を1拍目と3拍目、「カッ」を2拍目と4拍目の裏に置く
 CM_DON = tuple(float(b) for b in range(CM_BARS * 4) if b % 2 == 0)
@@ -293,42 +295,42 @@ CM_KA = tuple(b + 0.5 for b in range(CM_BARS * 4) if b % 2 == 1)
 SOUR_LEVELS = ((0.0, 0.0, 0.0), (35.0, 0.2, 0.6), (65.0, 0.45, 1.0))
 
 
-def pluck(freq: float, dur: float, brightness: float = 0.5, volume: float = 0.16) -> np.ndarray:
-    """三味線風の撥弦（Karplus-Strong）。周期ごとに平均をとって減衰させ、少しだけ歪ませて弦のさわりを出す。"""
-    n = int(SR * dur)
-    period = max(2, int(round(SR / freq)))
-    rng = np.random.default_rng(int(freq * 1000) % 2**32)
-    buf = rng.uniform(-1, 1, period).astype(np.float32)
-    out = np.empty(n, dtype=np.float32)
-    decay = 0.996 - (1 - brightness) * 0.01
-    for i in range(0, n, period):
-        k = min(period, n - i)
-        out[i : i + k] = buf[:k]
-        buf = (decay * 0.5 * (buf + np.roll(buf, -1))).astype(np.float32)
-    out = np.tanh(out * 1.8) / np.tanh(1.8)
-    return (out * _env(n, attack=0.001, release=0.02) * volume).astype(np.float32)
+KOTO = "Koto"
+TAIKO = "Taiko Drums"
+# 箏は爪で弾いた音。旋律は1音を長めに響かせ、低音は短く切る
+KOTO_PICKED = "Main Notes Picked"
+KOTO_RING = 0.9
+# 太鼓は、ドンを長胴太鼓の面、カッを同じ太鼓の縁、刻みを締太鼓、合いの手を鉦で打つ
+TAIKO_DON = "Nagado Chu A - Don"
+TAIKO_KA = "Nagado Chu A - Ka"
+TAIKO_SHIME = "Shime B4 - Ten"
+TAIKO_KANE = "GB Kane Center"
+# 締太鼓は8分で刻み、鉦は2拍目と4拍目に入れる
+CM_SHIME = tuple(b / 2 for b in range(CM_BARS * 8))
+CM_KANE = tuple(float(b) for b in range(CM_BARS * 4) if b % 2 == 1)
+# 狭い部屋で録ったような短い残響
+ROOM_SECONDS = 0.9
+ROOM_DECAY = 0.25
+ROOM_MIX = 0.22
 
 
-def taiko(dur: float = 0.35, volume: float = 0.35) -> np.ndarray:
-    """太鼓の「ドン」：音程が急に下がる低い正弦波。"""
-    n = int(SR * dur)
+def room_reverb(x: np.ndarray, seed: int = 3) -> np.ndarray:
+    """指数的に減衰する雑音を畳み込み、短い残響を足す。"""
+    rng = np.random.default_rng(seed)
+    n = int(SR * ROOM_SECONDS)
     t = np.arange(n) / SR
-    freq = 70 + 90 * np.exp(-t / 0.03)
-    phase = 2 * np.pi * np.cumsum(freq) / SR
-    return (np.sin(phase) * np.exp(-t / 0.12) * volume).astype(np.float32)
-
-
-def rim(rng: np.random.Generator, volume: float = 0.10) -> np.ndarray:
-    """太鼓の縁打ちの「カッ」：ごく短い明るい雑音。"""
-    n = int(SR * 0.04)
-    t = np.arange(n) / SR
-    click = np.diff(rng.normal(0, 1, n + 1)) * np.exp(-t / 0.008)
-    return (click * volume).astype(np.float32)
+    ir = rng.normal(0, 1, n) * np.exp(-t / ROOM_DECAY)
+    ir = lowpass(ir.astype(np.float32), taps=4)
+    ir /= np.sqrt(np.sum(ir**2))
+    size = 1 << int(np.ceil(np.log2(x.size + n)))
+    wet = np.fft.irfft(np.fft.rfft(x, size) * np.fft.rfft(ir, size), size)[: x.size]
+    return (x + wet.astype(np.float32) * ROOM_MIX).astype(np.float32)
 
 
 def cm_theme(sour_points: tuple[float, ...] = (), tail: float = 0.0, seed: int = 7) -> np.ndarray:
-    """和風で元気なCM曲。最初は素直に鳴らし、sour_points（秒）を過ぎるたびに音を外していく。
+    """和風で元気なCM曲。GarageBandの箏と太鼓で鳴らす。
 
+    最初は素直に鳴らし、sour_points（秒）を過ぎるたびに音を外していく。
     tail 秒だけ長く合成し、最後の音の余韻を残す（テープ停止に使う）。
     """
     rng = np.random.default_rng(seed)
@@ -343,18 +345,26 @@ def cm_theme(sour_points: tuple[float, ...] = (), tail: float = 0.0, seed: int =
         shift = rng.normal(0, cents) / 100 if cents else 0.0
         if rng.random() < wrong_rate:
             shift += rng.choice([-1.0, 1.0])
-        return midi_hz(note) * 2 ** (shift / 12)
+        return note + shift
 
-    for start, length, note in CM_LEAD:
+    for i, (start, length, note) in enumerate(CM_LEAD):
         at = start * beat
-        place(out, pluck(sour(note, at), max(length * beat, 0.45), brightness=0.8), at)
-    for start, length, note in CM_BASS:
+        tone = garageband.note(KOTO, KOTO_PICKED, sour(note, at), KOTO_RING, volume=1.0, take=i, velocity=100)
+        place(out, tone, at)
+    for i, (start, length, note) in enumerate(CM_BASS):
         at = start * beat
-        place(out, pluck(sour(note, at), 0.45, brightness=0.3, volume=0.10), at)
-    for b in CM_DON:
-        place(out, taiko(), b * beat)
-    for b in CM_KA:
-        place(out, rim(rng), b * beat)
+        tone = garageband.note(KOTO, KOTO_PICKED, sour(note, at), length * beat, volume=0.6, take=i, velocity=80)
+        place(out, tone, at)
+    for i, b in enumerate(CM_DON):
+        place(out, garageband.hit(TAIKO, TAIKO_DON, 0.8, volume=0.45, take=i), b * beat)
+    for i, b in enumerate(CM_KA):
+        place(out, garageband.hit(TAIKO, TAIKO_KA, 0.3, volume=0.15, take=i), b * beat)
+    for i, b in enumerate(CM_SHIME):
+        accent = 0.08 if i % 2 == 0 else 0.05
+        place(out, garageband.hit(TAIKO, TAIKO_SHIME, 0.2, volume=accent, take=i), b * beat)
+    for i, b in enumerate(CM_KANE):
+        place(out, garageband.hit(TAIKO, TAIKO_KANE, 0.5, volume=0.07, take=i), b * beat)
+    out = room_reverb(out)
 
     # テープの揺れは、揺れのない版と強い版を、崩れ具合に応じて混ぜて強めていく
     warped = wow_flutter(out, wow_depth=0.010, flutter_depth=0.0018)
