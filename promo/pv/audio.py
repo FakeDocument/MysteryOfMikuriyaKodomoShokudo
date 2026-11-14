@@ -171,16 +171,21 @@ def reverse_swell(duration: float, rng: np.random.Generator, volume: float = 0.1
 
 def drive_theme(bpm: float, bars: int, rng: np.random.Generator) -> np.ndarray:
     """ゲーム紹介の曲：四つ打ちのキック、2・4拍のスネア、裏拍のハイハット、
-    8分で跳ねるベース、16分のアルペジオ。最後の拍は余韻を残して止める。"""
+    8分で跳ねるベース、16分のアルペジオ。最後の拍のフィルから主音の和音で終え、余韻を残す。"""
     beat = 60.0 / bpm
-    out = silence(bars * 4 * beat + 0.6)
+    out = silence(bars * 4 * beat + DRIVE_TAIL)
     for bar in range(bars):
         root, chord = DRIVE_CHORDS[bar % len(DRIVE_CHORDS)]
         t0 = bar * 4 * beat
         for k in range(4):
             place(out, kick(), t0 + k * beat)
+        is_last_bar = bar == bars - 1
         for k in (1, 3):
             place(out, snare(rng), t0 + k * beat)
+        if is_last_bar:
+            # 最後の拍にスネアの16分のフィルを入れ、曲の終わりを予告する
+            for k in range(4):
+                place(out, snare(rng, 0.10 + 0.05 * k), t0 + 3 * beat + k * beat / 4)
         for k in range(16):
             # 裏拍の8分を強く、残りの16分は小さく刻む
             is_offbeat = k % 4 == 2
@@ -192,12 +197,37 @@ def drive_theme(bpm: float, bars: int, rng: np.random.Generator) -> np.ndarray:
         for k in range(16):
             note = chord[pattern[k % 8]] + (12 if k >= 8 else 0)
             place(out, saw_note(midi_hz(note), beat / 4 * 0.7, 0.035, taps=4), t0 + k * beat / 4)
-    # 最後の小節の終わりに、キックとシンバルを一発鳴らして締める
+    # 最後の小節の終わりに、主音の和音をキックとクラッシュシンバルと一緒に鳴らし、自然に減衰させて終える
     end = bars * 4 * beat
-    place(out, kick(0.5), end - 0.02)
-    place(out, hat(rng, 0.10, 0.25), end - 0.02)
-    fade = np.clip((out.size - np.arange(out.size)) / (SR * 0.5), 0, 1).astype(np.float32)
-    return out * fade
+    tail = silence(DRIVE_TAIL)
+    place(tail, kick(0.5), 0.0)
+    place(tail, crash(rng), 0.0)
+    place(tail, decaying_chord(DRIVE_FINAL_CHORD, DRIVE_TAIL), 0.0)
+    place(out, tail, end)
+    return out
+
+
+DRIVE_TAIL = 3.0  # 最後の和音の余韻の長さ（次の場面の下へ消えていく）
+DRIVE_FINAL_CHORD = (45, 57, 69, 72, 76)  # Am：低いA、A、A・C・E
+
+
+def crash(rng: np.random.Generator, volume: float = 0.09, decay: float = 0.9) -> np.ndarray:
+    """クラッシュシンバル：高域のノイズを長く減衰させる。"""
+    t = np.arange(int(SR * decay * 4)) / SR
+    noise = np.diff(rng.normal(0, 1, t.size), prepend=0.0)
+    return (noise * np.exp(-t / decay) * volume).astype(np.float32)
+
+
+def decaying_chord(notes: tuple[int, ...], duration: float, volume: float = 0.07) -> np.ndarray:
+    """のこぎり波の和音を一度鳴らし、ゆっくり減衰させる。"""
+    n = int(SR * duration)
+    t = np.arange(n) / SR
+    out = np.zeros(n, np.float32)
+    for note in notes:
+        phase = (t * midi_hz(note)) % 1.0
+        out += lowpass((2 * phase - 1).astype(np.float32), 16)
+    envelope = np.exp(-t / (duration * 0.3)) * np.clip((duration - t) / 0.2, 0, 1)
+    return (out / len(notes) * envelope * volume * 2).astype(np.float32)
 
 
 OMINOUS_BPM = 66.0
