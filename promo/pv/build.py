@@ -1,6 +1,12 @@
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["numpy", "pillow", "imageio-ffmpeg", "budoux"]
+# dependencies = [
+#     "numpy",
+#     "pillow",
+#     "imageio-ffmpeg",
+#     "budoux",
+#     "segno>=1.6.6",
+# ]
 # ///
 """PVの試作を書き出す。
 
@@ -27,6 +33,7 @@ import scene_evidence
 import scene_hook
 import scene_investigate
 import scene_office
+import scene_title
 import vhs
 from pixel import FPS, OUT_H, OUT_W, upscale
 
@@ -50,6 +57,7 @@ SCENES = (
     Scene("office", scene_office.DURATION, scene_office.render),
     Scene("investigate", scene_investigate.DURATION, scene_investigate.render),
     Scene("evidence", scene_evidence.DURATION, scene_evidence.render),
+    Scene("title", scene_title.DURATION, scene_title.render),
 )
 
 
@@ -123,6 +131,7 @@ def build_audio(path: Path) -> None:
     for t, kind in scene_office.audio_events():
         audio.place(track, clips[kind], scene_start("office") + t)
     _evidence_audio(track)
+    _title_audio(track)
     audio.write_wav(path, track)
 
 
@@ -131,6 +140,16 @@ def _evidence_audio(track: np.ndarray) -> None:
     start = scene_start("evidence") + scene_evidence.FIRST_AT
     hum = audio.drone(scene_evidence.DURATION - scene_evidence.FIRST_AT, volume=0.04)
     audio.place(track, hum, start)
+
+
+def _title_audio(track: np.ndarray) -> None:
+    """締め：タイトルが浮かぶところで、フックの曲と同じオルゴールの音で、和音を一度だけ鳴らす。"""
+    at = scene_start("title") + scene_title.TITLE_FADE[0]
+    for note in TITLE_CHIME:
+        audio.place(track, audio.music_box_note(audio.midi_hz(note), 2.5, volume=0.08), at)
+
+
+TITLE_CHIME = (69, 76)  # A・E（ゲーム紹介の曲が着地した主音の和音から）
 
 
 def final_frame(t: float, use_vhs: bool) -> np.ndarray:
