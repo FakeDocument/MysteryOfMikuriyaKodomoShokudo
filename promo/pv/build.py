@@ -23,6 +23,7 @@ from PIL import Image
 import audio
 import scene_break
 import scene_cm
+import scene_evidence
 import scene_hook
 import scene_investigate
 import scene_office
@@ -48,6 +49,7 @@ SCENES = (
     Scene("hook", scene_hook.DURATION, scene_hook.render),
     Scene("office", scene_office.DURATION, scene_office.render),
     Scene("investigate", scene_investigate.DURATION, scene_investigate.render),
+    Scene("evidence", scene_evidence.DURATION, scene_evidence.render),
 )
 
 
@@ -120,7 +122,15 @@ def build_audio(path: Path) -> None:
     }
     for t, kind in scene_office.audio_events():
         audio.place(track, clips[kind], scene_start("office") + t)
+    _evidence_audio(track)
     audio.write_wav(path, track)
+
+
+def _evidence_audio(track: np.ndarray) -> None:
+    """証拠の場面：ゲーム紹介の曲が止まった無音から、低い唸りだけを立ち上げる。語句には音を付けない。"""
+    start = scene_start("evidence") + scene_evidence.FIRST_AT
+    hum = audio.drone(scene_evidence.DURATION - scene_evidence.FIRST_AT, volume=0.04)
+    audio.place(track, hum, start)
 
 
 def final_frame(t: float, use_vhs: bool) -> np.ndarray:
@@ -171,6 +181,7 @@ def main() -> None:
     parser.add_argument("--no-vhs", action="store_true", help="VHSの劣化表現をかけずに書き出す")
     args = parser.parse_args()
     use_vhs = not args.no_vhs
+    scene_evidence.verify_sources()
     if args.stills:
         write_stills((0.8, 2.8, 4.6, 5.2, 6.6, 7.2, 7.8, 9.0), use_vhs)
         return
