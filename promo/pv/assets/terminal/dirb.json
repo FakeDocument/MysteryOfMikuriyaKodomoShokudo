@@ -1,0 +1,42 @@
+{
+  "host": "449bf5e1ce74",
+  "items": [
+    {
+      "shell": "dirb http://www.mikuriya-suisan.local/ /usr/share/dirb/wordlists/common.txt -S -r"
+    },
+    {
+      "output": [
+        "",
+        "-----------------",
+        "DIRB v2.22    ",
+        "By The Dark Raver",
+        "-----------------",
+        "",
+        "START_TIME: Thu Sep 10 13:00:40 2026",
+        "URL_BASE: http://www.mikuriya-suisan.local/",
+        "WORDLIST_FILES: /usr/share/dirb/wordlists/common.txt",
+        "OPTION: Not Recursive",
+        "OPTION: Silent Mode",
+        "",
+        "-----------------",
+        "",
+        "GENERATED WORDS: 4612",
+        "",
+        "---- Scanning URL: http://www.mikuriya-suisan.local/ ----",
+        "==> DIRECTORY: http://www.mikuriya-suisan.local/admin/",
+        "==> DIRECTORY: http://www.mikuriya-suisan.local/assets/",
+        "==> DIRECTORY: http://www.mikuriya-suisan.local/backup/",
+        "==> DIRECTORY: http://www.mikuriya-suisan.local/blog/",
+        "+ http://www.mikuriya-suisan.local/index.html (CODE:200|SIZE:11797)",
+        "==> DIRECTORY: http://www.mikuriya-suisan.local/menu/",
+        "+ http://www.mikuriya-suisan.local/robots.txt (CODE:200|SIZE:78)",
+        "==> DIRECTORY: http://www.mikuriya-suisan.local/shop/",
+        "+ http://www.mikuriya-suisan.local/sitemap.xml (CODE:200|SIZE:668)",
+        "",
+        "-----------------",
+        "END_TIME: Thu Sep 10 13:00:56 2026",
+        "DOWNLOADED: 4612 - FOUND: 3"
+      ]
+    }
+  ]
+}

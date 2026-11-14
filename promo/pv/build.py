@@ -24,6 +24,7 @@ import audio
 import scene_break
 import scene_cm
 import scene_hook
+import scene_investigate
 import scene_office
 import vhs
 from pixel import FPS, OUT_H, OUT_W, upscale
@@ -46,6 +47,7 @@ SCENES = (
     Scene("break", scene_break.DURATION, scene_break.render, scene_break.vhs_boost, lambda _t: 1.0),
     Scene("hook", scene_hook.DURATION, scene_hook.render),
     Scene("office", scene_office.DURATION, scene_office.render),
+    Scene("investigate", scene_investigate.DURATION, scene_investigate.render),
 )
 
 
@@ -95,9 +97,18 @@ def build_audio(path: Path) -> None:
     tail = _cm_audio(track, rng)
     audio.place(track, audio.tape_stop(tail, scene_break.TAPE_STOP_SEC), scene_start("break"))
 
-    # フックから先は不穏な曲を敷く
+    # フックから事務所までは不穏な曲を敷く。ゲーム紹介の頭で止める
     hook = scene_start("hook")
-    audio.place(track, audio.ominous_theme(total - hook), hook)
+    intro = scene_start("investigate")
+    ominous = audio.ominous_theme(intro - hook)
+    ominous *= np.clip((ominous.size - np.arange(ominous.size)) / (audio.SR * 0.6), 0, 1).astype(np.float32)
+    audio.place(track, ominous, hook)
+    # ゲーム紹介はアップテンポな曲。直前に上昇音を置いて、拍の頭で切り替える
+    swell = 0.9
+    audio.place(track, audio.reverse_swell(swell, rng), intro - swell)
+    # CMの曲と同じくらいの音量にそろえる
+    drive = audio.drive_theme(scene_investigate.BPM, scene_investigate.BARS, rng) * 0.55
+    audio.place(track, drive, intro)
     for start, end in scene_hook.writing_spans():
         audio.place(track, audio.pencil_scratch(end - start, rng), hook + start)
 

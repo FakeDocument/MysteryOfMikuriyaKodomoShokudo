@@ -123,6 +123,83 @@ def static_burst(duration: float, rng: np.random.Generator, volume: float = 0.10
     return ((noise + hum) * env * volume).astype(np.float32)
 
 
+# ---- ゲーム紹介のアップテンポな曲 -------------------------------------------
+
+# 1小節ごとの（ベースの音, 和音）。短調で緊張感を保つ：Am → F → G → Am → F → E
+DRIVE_CHORDS: tuple[tuple[int, tuple[int, int, int]], ...] = (
+    (45, (69, 72, 76)), (41, (65, 69, 72)), (43, (67, 71, 74)),
+    (45, (69, 72, 76)), (41, (65, 69, 72)), (40, (68, 71, 76)),
+)
+
+
+def kick(volume: float = 0.42) -> np.ndarray:
+    """キック：高めから一気に下がるサイン波。"""
+    t = np.arange(int(SR * 0.24)) / SR
+    freq = 45 + 95 * np.exp(-t / 0.03)
+    phase = np.cumsum(2 * np.pi * freq / SR)
+    return (np.sin(phase) * np.exp(-t / 0.11) * volume).astype(np.float32)
+
+
+def snare(rng: np.random.Generator, volume: float = 0.20) -> np.ndarray:
+    t = np.arange(int(SR * 0.18)) / SR
+    noise = np.diff(rng.normal(0, 1, t.size), prepend=0.0) * np.exp(-t / 0.05)
+    body = np.sin(2 * np.pi * 185 * t) * np.exp(-t / 0.04)
+    return ((noise * 0.7 + body * 0.6) * volume).astype(np.float32)
+
+
+def hat(rng: np.random.Generator, volume: float = 0.05, decay: float = 0.012) -> np.ndarray:
+    t = np.arange(int(SR * 0.06)) / SR
+    noise = np.diff(np.diff(rng.normal(0, 1, t.size), prepend=0.0), prepend=0.0)
+    return (noise * np.exp(-t / decay) * volume).astype(np.float32)
+
+
+def saw_note(freq: float, dur: float, volume: float, taps: int = 8) -> np.ndarray:
+    """のこぎり波の音を、低域通過で少し丸めて鳴らす。ベースとアルペジオに使う。"""
+    n = int(SR * dur)
+    phase = (np.arange(n) * freq / SR) % 1.0
+    wave_ = lowpass((2 * phase - 1).astype(np.float32), taps)
+    return (wave_ * _env(n, 0.003, 0.02) * volume).astype(np.float32)
+
+
+def reverse_swell(duration: float, rng: np.random.Generator, volume: float = 0.12) -> np.ndarray:
+    """逆再生のシンバルのように、だんだん大きくなって最後に途切れる上昇音。"""
+    n = int(SR * duration)
+    t = np.arange(n) / SR
+    noise = np.diff(rng.normal(0, 1, n), prepend=0.0)
+    return (noise * (t / duration) ** 3 * volume).astype(np.float32)
+
+
+def drive_theme(bpm: float, bars: int, rng: np.random.Generator) -> np.ndarray:
+    """ゲーム紹介の曲：四つ打ちのキック、2・4拍のスネア、裏拍のハイハット、
+    8分で跳ねるベース、16分のアルペジオ。最後の拍は余韻を残して止める。"""
+    beat = 60.0 / bpm
+    out = silence(bars * 4 * beat + 0.6)
+    for bar in range(bars):
+        root, chord = DRIVE_CHORDS[bar % len(DRIVE_CHORDS)]
+        t0 = bar * 4 * beat
+        for k in range(4):
+            place(out, kick(), t0 + k * beat)
+        for k in (1, 3):
+            place(out, snare(rng), t0 + k * beat)
+        for k in range(16):
+            # 裏拍の8分を強く、残りの16分は小さく刻む
+            is_offbeat = k % 4 == 2
+            place(out, hat(rng, 0.06 if is_offbeat else 0.025, 0.02 if is_offbeat else 0.008), t0 + k * beat / 4)
+        for k in range(8):
+            note = root + (12 if k % 2 else 0)
+            place(out, saw_note(midi_hz(note), beat / 2 * 0.85, 0.11, taps=14), t0 + k * beat / 2)
+        pattern = (0, 1, 2, 1, 0, 1, 2, 0)
+        for k in range(16):
+            note = chord[pattern[k % 8]] + (12 if k >= 8 else 0)
+            place(out, saw_note(midi_hz(note), beat / 4 * 0.7, 0.035, taps=4), t0 + k * beat / 4)
+    # 最後の小節の終わりに、キックとシンバルを一発鳴らして締める
+    end = bars * 4 * beat
+    place(out, kick(0.5), end - 0.02)
+    place(out, hat(rng, 0.10, 0.25), end - 0.02)
+    fade = np.clip((out.size - np.arange(out.size)) / (SR * 0.5), 0, 1).astype(np.float32)
+    return out * fade
+
+
 OMINOUS_BPM = 66.0
 # 短調で下がっていく、間の多い旋律（拍・長さ・音）
 OMINOUS_LEAD: tuple[Note, ...] = (
