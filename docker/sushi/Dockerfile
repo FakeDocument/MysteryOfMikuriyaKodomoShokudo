@@ -11,12 +11,16 @@ COPY nginx.conf /etc/nginx/sites-available/default
 COPY site/ /usr/share/nginx/html/
 COPY webmail/ /opt/mikuriya-webmail/
 COPY entrypoint.sh /entrypoint.sh
+# 共有の更新日時を、ビルドした日ではなく作中の日時にそろえる。
+# 共有内の資料で最も新しい「更新日: 2026年9月9日」より後、物語の起点（9月10日）より前にする
+ARG STAFF_SHARE_MTIME="2026-09-09 18:00:00 +0900"
 RUN useradd --system --user-group --no-create-home --shell /usr/sbin/nologin kanzaki \
     && printf '%s\n%s\n' 'Kanzaki2018' 'Kanzaki2018' | smbpasswd -a -s kanzaki \
     && chown -R root:kanzaki /srv/samba/staff \
     && find /srv/samba/staff -type d -exec chmod 0750 {} + \
     && find /srv/samba/staff -type f -exec chmod 0640 {} + \
-    && chmod +x /entrypoint.sh /opt/mikuriya-webmail/app.py
+    && chmod +x /entrypoint.sh /opt/mikuriya-webmail/app.py \
+    && find /srv/samba -exec touch -h -d "$STAFF_SHARE_MTIME" {} +
 
 EXPOSE 80 445
 

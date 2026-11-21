@@ -1,0 +1,31 @@
+{
+  "host": "449bf5e1ce74",
+  "items": [
+    {
+      "shell": "smbclient //www.mikuriya-suisan.local/staff -U kanzaki"
+    },
+    {
+      "output": [
+        "Password for [WORKGROUP\\kanzaki]:",
+        "Try \"help\" to get a list of possible commands."
+      ]
+    },
+    {
+      "prompt": "smb: \\> ",
+      "input": "ls"
+    },
+    {
+      "output": [
+        "  .                                   D        0  Wed Sep  9 18:00:00 2026",
+        "  ..                                  D        0  Wed Sep  9 18:00:00 2026",
+        "  02_customer_records                 D        0  Wed Sep  9 18:00:00 2026",
+        "  01_child_records                    D        0  Wed Sep  9 18:00:00 2026",
+        "  README.txt                          N      474  Wed Sep  9 18:00:00 2026",
+        "  04_store_operations                 D        0  Wed Sep  9 18:00:00 2026",
+        "  03_staff_records                    D        0  Wed Sep  9 18:00:00 2026",
+        "",
+        "\t\t61202244 blocks of size 1024. 291400 blocks available"
+      ]
+    }
+  ]
+}

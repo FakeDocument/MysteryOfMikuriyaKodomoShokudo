@@ -9,6 +9,7 @@ import markdown
 SITE_URL = "https://fakedocument.github.io/MysteryOfMikuriyaKodomoShokudo/"
 TITLE = "御厨こども食堂の謎"
 DESCRIPTION = "ささきえまちゃんをさがしてください"
+YOUTUBE_ID = "pF1wCVko6Os"
 
 root = Path(__file__).resolve().parents[1]
 body = markdown.markdown(
@@ -23,6 +24,10 @@ image = root / "docker/notebook/app/static/images/Sushi-ctf-所長-普段着-普
 shutil.copyfile(image, out / "assets/director.png")
 image_width, image_height = struct.unpack(">II", image.read_bytes()[16:24])
 image_url = SITE_URL + "assets/director.png"
+# GitHubのREADMEではiframeが除去されるため、紹介動画はPagesにだけ埋め込む
+video_html = f"""
+<div class="video"><iframe src="https://www.youtube-nocookie.com/embed/{YOUTUBE_ID}" title="{TITLE} 紹介動画" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen loading="lazy"></iframe></div>
+"""
 (out / "index.html").write_text(
     f"""<!doctype html>
 <html lang="ja" prefix="og: https://ogp.me/ns#"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -52,6 +57,7 @@ image_url = SITE_URL + "assets/director.png"
 <a class="download" href="https://github.com/FakeDocument/MysteryOfMikuriyaKodomoShokudo/releases/latest">起動用ZIPをダウンロード ↗</a>
 </header>
 <main id="guide">"""
+    + video_html
     + body
     + """
     </main>
