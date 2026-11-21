@@ -98,16 +98,20 @@ def _enlarge_mask(img: Image.Image) -> np.ndarray:
 
 
 def apply(frame: np.ndarray, t: float, boost: float = 0.0, strength: float = 1.0,
-          seed: int = 0) -> np.ndarray:
-    """劣化をかける。strength（0〜1）は元の映像との混ぜ具合で、0なら何もしない。"""
+          seed: int = 0, show_osd: bool = True) -> np.ndarray:
+    """劣化をかける。strength（0〜1）は元の映像との混ぜ具合で、0なら何もしない。
+
+    show_osd を False にすると、録画機の画面表示（PLAYと日時）を重ねない。
+    """
     if strength <= 0:
         return frame
     rng = np.random.default_rng(seed + int(t * 1000))
     f = frame.astype(np.float32) / 255.0
 
-    osd_text, osd_shadow = _osd(t)
-    f[osd_shadow & ~osd_text] *= 0.15
-    f[osd_text] = 0.95
+    if show_osd:
+        osd_text, osd_shadow = _osd(t)
+        f[osd_shadow & ~osd_text] *= 0.15
+        f[osd_text] = 0.95
 
     dx = _row_offsets(t, rng, boost)
     f = f[_YY, np.clip(_XX - dx[:, None], 0, W - 1)]
